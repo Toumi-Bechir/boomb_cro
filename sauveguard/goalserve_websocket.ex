@@ -7,23 +7,23 @@ defmodule Boomb.GoalserveWebsocket do
   @retry_delay 1000  # 1 second delay between retries
 
   def start_link(sport_type) do
-    #case get_token_with_retry(0) do
-    #  {:ok, token} ->
-    #    url = "#{@base_url}#{sport_type}?tkn=#{token}"
-    #    case WebSockex.start_link(url, __MODULE__, %{sport_type: sport_type}, name: {:via, Registry, {Boomb.Registry, sport_type}}) do
-    #      {:ok, pid} ->
-    #        Logger.info("WebSocket client for #{sport_type} started successfully")
-    #        {:ok, pid}
-    #      {:error, reason} ->
-    #        Logger.error("Failed to start WebSocket client for #{sport_type}: #{inspect(reason)}")
-    #        {:error, reason}
-    #    end
-    #  {:error, reason} ->
-    #    Logger.error("Failed to start WebSocket for #{sport_type} after #{@max_retries} retries: #{inspect(reason)}")
-    #    {:error, reason}
-    #end
-    url = "#{@base_url}#{sport_type}?tkn=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1biI6InRiZWNoaXIiLCJuYmYiOjE3NDQyNTcxNzIsImV4cCI6MTc0NDI2MDc3MiwiaWF0IjoxNzQ0MjU3MTcyfQ.JhCyN9n0Gmkq-DwMGuEbso14j_q_whymRisUAYHr8_8"#{token}
-    WebSockex.start_link(url, __MODULE__, %{sport_type: sport_type}, name: {:via, Registry, {Boomb.Registry, sport_type}})
+    case get_token_with_retry(0) do
+      {:ok, token} ->
+        url = "#{@base_url}#{sport_type}?tkn=#{token}"
+        case WebSockex.start_link(url, __MODULE__, %{sport_type: sport_type}, name: {:via, Registry, {Boomb.Registry, sport_type}}) do
+          {:ok, pid} ->
+            Logger.info("WebSocket client for #{sport_type} started successfully")
+            {:ok, pid}
+          {:error, reason} ->
+            Logger.error("Failed to start WebSocket client for #{sport_type}: #{inspect(reason)}")
+            {:error, reason}
+        end
+      {:error, reason} ->
+        Logger.error("Failed to start WebSocket for #{sport_type} after #{@max_retries} retries: #{inspect(reason)}")
+        {:error, reason}
+    end
+    #url = "#{@base_url}#{sport_type}?tkn=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1biI6InRiZWNoaXIiLCJuYmYiOjE3NDQzMTM3NzcsImV4cCI6MTc0NDMxNzM3NywiaWF0IjoxNzQ0MzEzNzc3fQ.pACCgWLTWy8nEwd5tWb0zHRHK_yLZS17DWW7KHmiSnk"
+    #WebSockex.start_link(url, __MODULE__, %{sport_type: sport_type}, name: {:via, Registry, {Boomb.Registry, sport_type}})
   end
 
 
@@ -140,7 +140,9 @@ defmodule Boomb.GoalserveWebsocket do
       stats: data["stats"],
       comments: data["cms"],
       period_time: parse_time(sport, data),
-      score: parse_score(sport, data)
+      score: parse_score(sport, data),
+      state: data["sc"],           # Add state code
+      ball_position: data["xy"]
     }
     Boomb.OddsCache.update_odds(event_id, odds_data)
     Boomb.OddsThrottler.update_odds(event_id, %{
@@ -150,7 +152,9 @@ defmodule Boomb.GoalserveWebsocket do
       stats: data["stats"],
       comments: data["cms"],
       period_time: parse_time(sport, data),
-      score: parse_score(sport, data)
+      score: parse_score(sport, data),
+      state: data["sc"],           # Add state code
+      ball_position: data["xy"]
     })
   end
 

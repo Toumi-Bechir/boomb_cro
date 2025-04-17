@@ -13,7 +13,7 @@ defmodule Boomb.Application do
     # Wait for Mnesia to be fully started
     #:mnesia.wait_for_tables([:event], 5000)
 
-    
+
     Boomb.Event.create_table()
 
     children = [
@@ -27,7 +27,7 @@ defmodule Boomb.Application do
       # {Boomb.Worker, arg},
       # Start to serve requests, typically the last entry
       BoombWeb.Endpoint,
-      #Boomb.GoalserveToken,
+      Boomb.GoalserveToken,
       Boomb.SportsCache,
       #Boomb.OddsCache,
       %{
@@ -57,5 +57,5 @@ defmodule Boomb.Application do
     :ok
   end
 
-  
+
 end

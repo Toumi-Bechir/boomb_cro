@@ -2,22 +2,20 @@ defmodule BoombWeb.EventLive do
   use BoombWeb, :live_view
 
   def mount(%{"event_id" => event_id}, _session, socket) do
+    IO.puts "********************** mount in BoombWeb.EventLive loaded *********************************"
     sports = ["soccer", "basket", "tennis", "baseball", "amfootball", "hockey", "volleyball"]
     if connected?(socket) do
       Enum.each(sports, fn sport ->
         Phoenix.PubSub.subscribe(Boomb.PubSub, "events_available:#{sport}")
-        # Subscribe to odds updates for the selected event
         Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
       end)
     end
 
-    # Fetch the selected event
     event = case Boomb.Event.get(event_id) do
       {:ok, event} -> event
       {:error, _} -> nil
     end
 
-    # Group events by sport and competition_name
     grouped_events = Enum.reduce(Boomb.SportsCache.get_sports(), %{}, fn {sport, events}, acc ->
       competitions = events
       |> Enum.group_by(& &1.competition_name)
@@ -25,19 +23,17 @@ defmodule BoombWeb.EventLive do
       Map.put(acc, sport, competitions)
     end)
 
-    # Fetch odds for the selected event
     odds = case Boomb.OddsCache.get_odds(event_id) do
-      {:ok, odds_data} -> odds_data
-      {:error, _} -> %{}
+      {:ok, odds_data} ->
+        # Ensure odds_data has a state field, even if it's nil initially
+        Map.merge(%{state: nil, ball_position: nil}, odds_data)
+      {:error, _} ->
+        # Default structure if no odds data is available
+        %{state: nil, ball_position: nil}
     end
 
-    # Fetch all cached odds for score and time display in the left menu
     initial_odds = Boomb.OddsCache.get_all_odds()
-
-    # Determine the sport of the selected event to expand it by default
     expanded_sport = if event, do: event.sport, else: nil
-
-    # Default odds filter
     odds_filter = "ALL"
 
     {:ok, assign(socket,
@@ -49,7 +45,7 @@ defmodule BoombWeb.EventLive do
       sports: sports,
       expanded_sport: expanded_sport,
       odds_filter: odds_filter,
-    ball_position_history: []
+      ball_position_history: []
     )}
   end
 
@@ -60,29 +56,26 @@ defmodule BoombWeb.EventLive do
 
   def handle_event("select_event", %{"event_id" => event_id}, socket) do
     sports = socket.assigns.sports
-    # Unsubscribe from odds updates for the previous event
     Enum.each(sports, fn sport ->
       Phoenix.PubSub.unsubscribe(Boomb.PubSub, "odds_update:#{sport}:#{socket.assigns.selected_event_id}")
     end)
 
-    # Subscribe to odds updates for the new event
     Enum.each(sports, fn sport ->
       Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
     end)
 
-    # Fetch the selected event
     event = case Boomb.Event.get(event_id) do
       {:ok, event} -> event
       {:error, _} -> nil
     end
 
-    # Fetch odds for the selected event
     odds = case Boomb.OddsCache.get_odds(event_id) do
-      {:ok, odds_data} -> odds_data
-      {:error, _} -> %{}
+      {:ok, odds_data} ->
+        Map.merge(%{state: nil, ball_position: nil}, odds_data)
+      {:error, _} ->
+        %{state: nil, ball_position: nil}
     end
 
-    # Expand the sport of the selected event
     expanded_sport = if event, do: event.sport, else: socket.assigns.expanded_sport
 
     {:noreply, assign(socket,
@@ -109,32 +102,33 @@ defmodule BoombWeb.EventLive do
   end
 
   def handle_info(%{event_id: event_id, odds: odds, score: score, period_time: period_time, state: state, ball_position: ball_position}, socket) do
-    updated_odds = Map.put(socket.assigns.all_odds, event_id, %{
+    #IO.puts "-------state-----#{inspect state}------------------------"
+    updated_odds_data = %{
       odds: odds,
       score: score,
       period_time: period_time,
       state: state,
-    ball_position: ball_position
-    })
-    
+      ball_position: ball_position
+    }
+    updated_odds = Map.put(socket.assigns.all_odds, event_id, updated_odds_data)
+
     ball_position_history = if event_id == socket.assigns.selected_event_id do
-    current_history = socket.assigns[:ball_position_history] || []
-    # Add new position if available, limit history to last 5 positions for performance
-    if ball_position do
-      new_history = [ball_position | current_history] |> Enum.take(7)
-      new_history
+      current_history = socket.assigns[:ball_position_history] || []
+      if ball_position do
+        new_history = [ball_position | current_history] |> Enum.take(7)
+        new_history
+      else
+        current_history
+      end
     else
-      current_history
+      socket.assigns[:ball_position_history] || []
     end
-  else
-    socket.assigns[:ball_position_history] || []
-  end
 
     if event_id == socket.assigns.selected_event_id do
       {:noreply, assign(socket,
-        odds: %{odds: odds, score: score, period_time: period_time},
+        odds: updated_odds_data,
         all_odds: updated_odds,
-      ball_position_history: ball_position_history
+        ball_position_history: ball_position_history
       )}
     else
       {:noreply, assign(socket, all_odds: updated_odds, ball_position_history: ball_position_history)}
@@ -148,23 +142,30 @@ defmodule BoombWeb.EventLive do
   end
 
   defp map_ball_position(ball_position, pitch_width \\ 275, pitch_height \\ 160) do
-  string = ball_position
-  [x, y] = String.split(string, ",")
-  
- case String.split(ball_position, ",") do
-    # Assuming xy is a tuple {x, y} with values in some range (e.g., 0-100 for both)
-    [x, y] ->
-      # Normalize to SVG dimensions
-      svg_x = String.to_float(x) * 100 #pitch_width / 100
-      svg_y = String.to_float(y) * 60 #pitch_height / 100
-      {svg_x, svg_y}
-    _ ->
-      # Default to center if no position
-      {pitch_width / 2, pitch_height / 2}
+    case String.split(ball_position, ",") do
+      [x, y] ->
+        try do
+          svg_x = parse_to_float(x) * 100
+          svg_y = parse_to_float(y) * 60
+          {svg_x, svg_y}
+        rescue
+          _ -> {pitch_width / 2, pitch_height / 2}
+        end
+      _ ->
+        {pitch_width / 2, pitch_height / 2}
+    end
   end
-  
 
-end
+  defp parse_to_float(binary) when is_binary(binary) do
+    case Float.parse(binary) do
+      {float, _} -> float
+      :error ->
+        case Integer.parse(binary) do
+          {int, _} -> int * 1.0
+          :error -> raise ArgumentError, "Invalid float representation: #{binary}"
+        end
+    end
+  end
 
   defp get_market_odds(odds_data, market_id, default \\ nil) do
     case odds_data do
@@ -182,16 +183,16 @@ end
   end
 
   defp get_state_color(state_name) do
-  state = String.downcase(state_name)
-  cond do
-    String.contains?(state, "attack") -> "text-orange-500"
-    String.contains?(state, "dangerous") -> "text-red-500"
-    String.contains?(state, "possession") -> "text-green-500"
-    String.contains?(state, "free kick") -> "text-yellow-500"
-    String.contains?(state, "corner") -> "text-blue-500"
-    true -> "text-white"
+    state = String.downcase(state_name)
+    cond do
+      String.contains?(state, "attack") -> "text-orange-500"
+      String.contains?(state, "dangerous") -> "text-red-500"
+      String.contains?(state, "possession") -> "text-green-500"
+      String.contains?(state, "free kick") -> "text-yellow-500"
+      String.contains?(state, "corner") -> "text-blue-500"
+      true -> "text-white"
+    end
   end
-end
 
   defp sport_background("soccer"), do: "bg-green-700"
   defp sport_background("basket"), do: "bg-yellow-700"
@@ -251,7 +252,6 @@ end
   """
 
   defp sport_count(grouped_events, sport) do
-  
     case Map.get(grouped_events, sport) do
       nil -> 0
       competitions ->
@@ -269,18 +269,19 @@ end
       _ -> "Unknown Market"
     end
   end
+
   defp get_state_name(sport, state_code) do
-  case sport do
-    "soccer" -> Boomb.StateDictionaries.get_soccer_state_name(state_code)
-    "basket" -> Boomb.StateDictionaries.get_basket_state_name(state_code)
-    "tennis" -> Boomb.StateDictionaries.get_tennis_state_name(state_code)
-    "baseball" -> Boomb.StateDictionaries.get_baseball_state_name(state_code)
-    "amfootball" -> Boomb.StateDictionaries.get_amfootball_state_name(state_code)
-    "hockey" -> Boomb.StateDictionaries.get_hockey_state_name(state_code)
-    "volleyball" -> Boomb.StateDictionaries.get_volleyball_state_name(state_code)
-    _ -> "Unknown State"
+    case sport do
+      "soccer" -> Boomb.StateDictionaries.get_soccer_state_name(state_code)
+      "basket" -> Boomb.StateDictionaries.get_basket_state_name(state_code)
+      "tennis" -> Boomb.StateDictionaries.get_tennis_state_name(state_code)
+      "baseball" -> Boomb.StateDictionaries.get_baseball_state_name(state_code)
+      "amfootball" -> Boomb.StateDictionaries.get_amfootball_state_name(state_code)
+      "hockey" -> Boomb.StateDictionaries.get_hockey_state_name(state_code)
+      "volleyball" -> Boomb.StateDictionaries.get_volleyball_state_name(state_code)
+      _ -> "Unknown State"
+    end
   end
-end
 
   def render(assigns) do
     ~H"""
@@ -466,7 +467,7 @@ end
                 <div class="bg-gray-800 p-4 rounded-lg">
                   <div class="flex justify-between items-center mb-2">
                     <h3 class="text-md font-medium text-gray-300">
-                     <%= get_market_name(@event.sport, market_id) %>
+                      <%= get_market_name(@event.sport, market_id) %>
                     </h3>
                     <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -495,102 +496,109 @@ end
       <aside class="hidden lg:block w-1/4 bg-gray-800 border-l border-gray-700 p-4 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         <div class="space-y-4">
           <!-- Tracker -->
-         
-<div class="bg-gray-700 p-4 rounded-lg">
-  <div class="relative">
-    <!-- Dynamic Soccer Pitch -->
-    <%= if @event && @event.sport == "soccer" do %>
-      <div class="w-full h-40 bg-green-800 rounded-lg relative overflow-hidden">
-        <!-- SVG Pitch -->
-        <svg class="w-full h-full" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet">
-          <!-- Pitch Outline -->
-          <rect x="0" y="0" width="100" height="60" fill="none" stroke="white" stroke-width="0.5" />
-          <!-- Center Line -->
-          <line x1="50" y1="0" x2="50" y2="60" stroke="white" stroke-width="0.5" stroke-dasharray="2,2" />
-          
-          <!-- Penalty Areas -->
-          <rect x="0" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
-          <rect x="90" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
-          <!-- Goal Areas -->
-          <rect x="0" y="22.5" width="5" height="15" fill="none" stroke="white" stroke-width="0.5" />
-          <rect x="95" y="22.5" width="5" height="15" fill="none" stroke="white" stroke-width="0.5" />
-          <!-- Goals -->
-          <rect x="0" y="25" width="1" height="10" fill="white" />
-          <rect x="99" y="25" width="1" height="10" fill="white" />
-<% IO.puts "---html -------#{@ball_position_history}--------++"%>
-          <!-- Ball Path (if positions exist) -->
-          <%= if length(@ball_position_history) > 1 do %>
-          <% 
-              points={Enum.map(@ball_position_history, fn pos ->
-                {x, y} = map_ball_position(pos)
-                "#{x},#{y}"
-              end) |> Enum.join(" ")}|> IO.inspect 
-          %>
-            <polyline
-              points={Enum.map(@ball_position_history, fn pos ->
-                {x, y} = map_ball_position(pos)
-                "#{x},#{y}"
-              end) |> Enum.join(" ")}
-              fill="none"
-              stroke="white"
-              stroke-width="0.5"
-            />
-          <% end %>
+          <div class="bg-gray-700 p-4 rounded-lg">
+            <div class="relative">
+              <!-- Dynamic Soccer Pitch -->
+              <%= if @event && @event.sport == "soccer" do %>
+                <div class="w-full h-40 bg-green-800 rounded-lg relative overflow-hidden">
+                  <!-- SVG Pitch -->
+                  <svg class="w-full h-full" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet">
+                    <!-- Pitch Outline -->
+                    <rect x="0" y="0" width="100" height="60" fill="none" stroke="white" stroke-width="0.5" />
+                    <!-- Center Line -->
+                    <line x1="50" y1="0" x2="50" y2="60" stroke="white" stroke-width="0.5" stroke-dasharray="2,2" />
 
-          <!-- Ball -->
-          <% IO.puts "svg circle pos #{inspect List.last(@ball_position_history)}"%>
-          <%= if ball_pos = List.first(@ball_position_history) do %>
-          
-            <% {ball_x, ball_y} = map_ball_position(ball_pos) %>
-            <circle
-              cx={ball_x}
-              cy={ball_y}
-              r="1"
-              fill="white"
-              class="transition-all duration-500 ease-in-out"
-            />
-            <!-- Center Circle -->
-          <circle cx={ball_x} cy={ball_y} r="3" class="transition-all duration-500 ease-in-out" fill="none" stroke="white" stroke-width="0.3" />
-            <!-- State Text -->
-            <%= if state_code = Map.get(@odds, :state) do %>
-              <% state_name = get_state_name(@event.sport, state_code) %>
-              <text
-                x={ball_x + 5}
-                y={ball_y - 2}
-                class={"text-xs font-semibold #{get_state_color(state_name)} transition-all duration-500 ease-in-out"}
-                fill="currentColor"
-              >
-                <%= state_name %>
-              </text>
-            <% end %>
-          <% else %>
-            <!-- Default Ball Position (Center) -->
-            <circle cx="50" cy="30" r="1" fill="white" />
-          <% end %>
-        </svg>
+                    <!-- Penalty Areas -->
+                    <rect x="0" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
+                    <rect x="90" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
+                    <!-- Goal Areas -->
+                    <rect x="0" y="22.5" width="5" height="15" fill="none" stroke="white" stroke-width="0.5" />
+                    <rect x="95" y="22.5" width="5" height="15" fill="none" stroke="white" stroke-width="0.5" />
+                    <!-- Goals -->
+                    <rect x="0" y="25" width="1" height="10" fill="white" />
+                    <rect x="99" y="25" width="1" height="10" fill="white" />
+                    <!-- Ball Path (if positions exist) -->
+                    <%= if length(@ball_position_history) > 1 do %>
+                      <%
+                        points = Enum.map(@ball_position_history, fn pos ->
+                          {x, y} = map_ball_position(pos)
+                          "#{x},#{y}"
+                        end) |> Enum.join(" ")
+                      %>
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke="white"
+                        stroke-width="0.5"
+                      />
+                    <% end %>
 
-        <!-- Time Display -->
-        <div class="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-          <%= format_time(Map.get(@odds, :period_time, 0)) %>
-        </div>
-      </div>
-    <% else %>
-      <div class="w-full h-40 bg-green-800 rounded-lg flex justify-center items-center">
-        <div class="text-gray-400 text-sm">Tracker Not Available for This Sport</div>
-      </div>
-    <% end %>
+                    <!-- Ball -->
 
-    <!-- Match Info -->
-    <div class="flex justify-between items-center mt-2">
-      <div class="text-gray-300 text-sm">
-        <%= @event.team1 %> <%= Map.get(@odds, :score, "0:0") %>
-      </div>
-      <div class="text-gray-300 text-sm">
-        <%= Map.get(@odds, :score, "0:0") %> <%= @event.team2 %>
-      </div>
-    </div>
-  </div>
-</div>
+                    <%= if ball_pos = List.first(@ball_position_history) do %>
+                      <% {ball_x, ball_y} = map_ball_position(ball_pos) %>
+                      <circle
+                        cx={ball_x}
+                        cy={ball_y}
+                        r="1"
+                        fill="white"
+                        class="transition-all duration-500 ease-in-out"
+                      />
+                      <!-- Center Circle -->
+                      <circle cx={ball_x} cy={ball_y} r="3" class="transition-all duration-500 ease-in-out" fill="none" stroke="white" stroke-width="0.3" />
+                      <!-- State Text -->
+
+                      <% state_code = Map.get(@odds, :state) %>
+                      <% state_name = if state_code do
+                        get_state_name(@event.sport, state_code)
+                      else
+                        "No State Available"
+                      end %>
+                      <text
+                        x={ball_x + 5}
+                        y={ball_y - 2}
+                        class={"font-semibold #{get_state_color(state_name)} transition-all duration-500 ease-in-out"}
+                        fill="currentColor"
+                         style="font-size: 5px;"
+                      >
+                        <%= state_name %>
+                      </text>
+                    <% else %>
+                      <!-- Default Ball Position (Center) -->
+                      <circle cx="50" cy="30" r="1" fill="white" />
+                      <!-- Default State Text -->
+                      <text
+                        x="55"
+                        y="28"
+                        class="text-xs font-semibold text-gray-400"
+                        fill="currentColor"
+                      >
+                        No State Available
+                      </text>
+                    <% end %>
+                  </svg>
+                  <!-- Time Display -->
+                  <div class="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                    <%= format_time(Map.get(@odds, :period_time, 0)) %>
+                  </div>
+                </div>
+              <% else %>
+                <div class="w-full h-40 bg-green-800 rounded-lg flex justify-center items-center">
+                  <div class="text-gray-400 text-sm">Tracker Not Available for This Sport</div>
+                </div>
+              <% end %>
+
+              <!-- Match Info -->
+              <div class="flex justify-between items-center mt-2">
+                <div class="text-gray-300 text-sm">
+                  <%= @event.team1 %> <%= Map.get(@odds, :score, "0:0") %>
+                </div>
+                <div class="text-gray-300 text-sm">
+                  <%= Map.get(@odds, :score, "0:0") %> <%= @event.team2 %>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Statistics -->
           <div class="bg-gray-700 p-4 rounded-lg">
@@ -676,11 +684,11 @@ end
   end
 
   # Helper to determine which market IDs to show for each filter
-  defp market_ids_for_filter("ALL"), do: ["1777", "27", "1016", "31"] # Example: Show all markets
+  defp market_ids_for_filter("ALL"), do: ["1777", "27", "1016", "31"]
   defp market_ids_for_filter("Bet Build"), do: ["1777"]
   defp market_ids_for_filter("Goal"), do: ["1016"]
   defp market_ids_for_filter("Score"), do: ["31"]
-  defp market_ids_for_filter("Halftime"), do: ["1777"] # Example: Halftime markets
+  defp market_ids_for_filter("Halftime"), do: ["1777"]
   defp market_ids_for_filter("Handicap"), do: ["31"]
   defp market_ids_for_filter("Corners"), do: ["31"]
   defp market_ids_for_filter("Specials"), do: ["1016"]

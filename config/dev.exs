@@ -3,7 +3,7 @@ import Config
 # Configure your database
 config :boomb, Boomb.Repo,
   username: "root",
-  password: "Rs62547-",
+  password: "",
   hostname: "localhost",
   database: "boomb_dev",
   port: 3306,
@@ -21,7 +21,8 @@ config :boomb, BoombWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: 4000],
-  check_origin: false,
+  url: [host: "37.27.0.208", port: 80],
+  check_origin: ["http://37.27.0.208", "http://127.0.0.1:4000"],
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "Or6M9mkR9imsx5nYxlGzw0yIDCB6aP6VegdPZt+oxwWZEjI1ObqyBOZ2XkH+qvxu",
@@ -62,7 +63,7 @@ config :boomb, BoombWeb.Endpoint,
       ~r"lib/boomb_web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
-
+  #config :boomb, :simulate_websocket, true
 # Enable dev routes for dashboard and mailbox
 config :boomb, dev_routes: true
 

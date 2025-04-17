@@ -3,6 +3,7 @@ defmodule BoombWeb.OverviewLive do
   require Logger
 
   def mount(_params, _session, socket) do
+    IO.puts "********************** mount in BoombWeb.OverviewLive loaded *********************************"
     sports = ["soccer", "basket", "tennis", "baseball", "amfootball", "hockey", "volleyball"]
     if connected?(socket) do
       Enum.each(sports, fn sport ->
@@ -21,11 +22,12 @@ defmodule BoombWeb.OverviewLive do
       odds: initial_odds,
       sports: sports,
       sports_data: sports_data, # Store sports_data in assigns
-      selected_sport: nil # Initially show all sports
+      selected_sport: "soccer" #nil # Initially show all sports
     )}
   end
 
   def handle_event("filter_by_sport", %{"sport" => sport}, socket) do
+    IO.puts "---------------handle event filter   -------#{inspect sport}---- --------------------------"
     selected_sport = if sport == socket.assigns.selected_sport, do: nil, else: sport
     sports_data = Boomb.SportsCache.get_sports()
     events_by_competition = organize_events_by_competition(sports_data, selected_sport)
@@ -250,10 +252,10 @@ defmodule BoombWeb.OverviewLive do
                               <%= event.team1 %> vs <%= event.team2 %>
                             </a>
                             <span class="text-xs text-gray-400 block">
-                              <%= case event.period_code do 
-                                 0 -> "(Not Started)" 
-                                 1 -> "(1st Half)" 
-                                 _ -> "(Live)" 
+                              <%= case event.period_code do
+                                 0 -> "(Not Started)"
+                                 1 -> "(1st Half)"
+                                 _ -> "(Live)"
                                end %>
                             </span>
                           </td>
