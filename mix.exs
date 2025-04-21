@@ -61,7 +61,8 @@ defmodule Boomb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:tesla, "~> 1.4"},
       {:websockex, "~> 0.4.3"},
-      {:amnesia, "~> 0.2.8"}
+      {:amnesia, "~> 0.2.8"},
+      {:timex, "~> 3.7"}
     ]
   end
 

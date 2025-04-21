@@ -35,7 +35,8 @@ defmodule Boomb.Application do
       start: {Boomb.OddsCache, :start_link, ["ztart"]}
       },
       Boomb.OddsThrottler,
-      {Boomb.GoalserveWebsocketSupervisor, []}
+      {Boomb.GoalserveWebsocketSupervisor, []},
+      {Boomb.Pregame.PregameFetcher, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -1,4 +1,4 @@
-defmodule BoombWeb.EventLive111 do
+defmodule BoombWeb.EventLive do
   use BoombWeb, :live_view
 
   def mount(%{"event_id" => event_id}, _session, socket) do

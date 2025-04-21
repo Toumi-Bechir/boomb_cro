@@ -1,0 +1,66 @@
+<div class="container mx-auto p-4">
+  <%= if @live_action == :overview do %>
+    <h1 class="text-2xl font-bold mb-4">Pregame Betting</h1>
+    <div class="mb-4">
+      <label for="sport" class="block text-sm font-medium">Sport</label>
+      <select id="sport" phx-change="select_sport" class="mt-1 block w-full">
+        <%= for sport <- @sports do %>
+          <option value="<%= sport %>" <%= if @selected_sport == sport, do: "selected" %>><%= String.capitalize(sport) %></option>
+        <% end %>
+      </select>
+    </div>
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold">Select Leagues</h2>
+      <button phx-click="select_all" class="bg-blue-500 text-white px-4 py-2 rounded mb-2">Select All</button>
+      <%= for {country, leagues} <- @leagues_by_country do %>
+        <div class="mb-2">
+          <h3 class="text-lg font-medium"><%= country %></h3>
+          <%= for league <- leagues do %>
+            <label class="inline-flex items-center">
+              <input type="checkbox" phx-click="toggle_league" phx-value-league="<%= league %>" <%= if league in @selected_leagues, do: "checked" %> />
+              <span class="ml-2"><%= league %></span>
+            </label>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    <button phx-click="validate" class="bg-green-500 text-white px-4 py-2 rounded">View Matches</button>
+  <% end %>
+
+  <%= if @live_action == :matches do %>
+    <h1 class="text-2xl font-bold mb-4">Pregame Matches - <%= String.capitalize(@sport) %></h1>
+    <a href={~p"/pregame"} class="text-blue-500 mb-4 inline-block">Back to Leagues</a>
+    <%= for {country, matches} <- Enum.group_by(@matches, fn {c, _, _, _} -> c end) do %>
+      <h2 class="text-xl font-semibold mt-4"><%= country %></h2>
+      <%= for {league, league_matches} <- Enum.group_by(matches, fn {_, l, _, _} -> l end) do %>
+        <h3 class="text-lg font-medium mt-2"><%= league %></h3>
+        <div class="mt-2">
+          <%= for {_, _, starttime, match} <- league_matches do %>
+            <a href={~p"/pregame/match/#{@sport}/#{match.id}?#{[leagues: @leagues]}"}
+               class="block p-2 border-b hover:bg-gray-100">
+              <%= match.home_team %> vs <%= match.away_team %> - <%= format_time(starttime) %>
+            </a>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= if @live_action == :match do %>
+    <h1 class="text-2xl font-bold mb-4">Match Details</h1>
+    <a href={~p"/pregame/matches?#{[sport: @sport, leagues: @leagues]}"}
+       class="text-blue-500 mb-4 inline-block">Back to Matches</a>
+    <div class="border p-4 rounded">
+      <h2 class="text-xl font-semibold"><%= @match.home_team %> vs <%= @match.away_team %></h2>
+      <p><strong>Sport:</strong> <%= String.capitalize(@match.sport) %></p>
+      <p><strong>League:</strong> <%= @match.league %></p>
+      <p><strong>Country:</strong> <%= @match.country %></p>
+      <p><strong>Start Time:</strong> <%= format_time(@match.starttime) %></p>
+      <p><strong>Odds:</strong> <%= inspect(@match.odds) %></p>
+    </div>
+  <% end %>
+</div>
+
+<% defp format_time(dt) do %>
+  <%= Calendar.strftime(dt, "%Y-%m-%d %H:%M") %>
+<% end %>

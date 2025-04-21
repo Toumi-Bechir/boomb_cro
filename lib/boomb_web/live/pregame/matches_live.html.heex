@@ -1,0 +1,68 @@
+<div class="flex flex-col h-screen bg-gray-100">
+  <!-- Sticky Header -->
+  <div class="sticky top-0 z-10 bg-gray-800 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold">Matches for <%= String.capitalize(to_string(@sport)) %> - <%= filter_label(@filter) %></h1>
+    <a
+      href={~p"/pregame/sports?#{[sport: @sport, filter: @filter]}"}
+      class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
+    >
+      Back to <%= String.capitalize(to_string(@sport)) %>
+    </a>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 p-4 overflow-y-auto">
+    <%= if @matches == [] do %>
+      <p class="text-gray-500">No matches available for the selected sport, filter, or leagues.</p>
+    <% else %>
+      <%= for {country, leagues} <- @matches do %>
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-2 text-gray-900"><%= country %></h2>
+          <%= for {league, time_groups} <- leagues do %>
+            <div class="mb-4">
+              <h3 class="text-lg font-medium mb-2 text-gray-800"><%= league %></h3>
+              <%= for {start_time, matches} <- time_groups do %>
+                <div class="mb-4">
+                  <h4 class="text-md font-medium mb-2 text-gray-700">
+                    <%= format_datetime(start_time) %>
+                  </h4>
+                  <div class="grid grid-cols-1 gap-4">
+                    <%= for match <- matches do %>
+                      <a
+                        href={~p"/pregame/match/#{match.match_id}?#{[sport: @sport, filter: @filter, leagues: Enum.map(@leagues, fn {c, l} -> "#{c}:#{l}" end)]}"}
+                        class="block bg-gray-50 p-3 rounded shadow hover:bg-gray-100 transition"
+                      >
+                        <div class="flex justify-between items-center">
+                          <div>
+                            <p class="font-medium text-gray-800">
+                              <%= match.team1_name %> vs <%= match.team2_name %>
+                            </p>
+                          </div>
+                          <div class="flex space-x-2">
+                            <% {home_odds, away_odds} = get_home_away_odds(match.markets) %>
+                            <div class="text-center">
+                              <p class="text-sm text-gray-600">Home</p>
+                              <p class="font-medium text-gray-800">
+                                <%= if home_odds, do: :erlang.float_to_binary(home_odds, decimals: 2), else: "-" %>
+                              </p>
+                            </div>
+                            <div class="text-center">
+                              <p class="text-sm text-gray-600">Away</p>
+                              <p class="font-medium text-gray-800">
+                                <%= if away_odds, do: :erlang.float_to_binary(away_odds, decimals: 2), else: "-" %>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

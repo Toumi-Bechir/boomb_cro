@@ -1,4 +1,4 @@
-defmodule BoombWeb.OverviewLive111 do
+defmodule BoombWeb.OverviewLive do
   use BoombWeb, :live_view
   require Logger
 

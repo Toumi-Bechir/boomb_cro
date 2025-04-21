@@ -22,6 +22,14 @@ defmodule BoombWeb.Router do
     live "/test", TestLive
   end
 
+  scope "/pregame", BoombWeb.Pregame do
+    pipe_through :browser
+
+    live "/sports", SportsLive, :index
+    live "/matches", MatchesLive, :index
+    live "/match/:match_id", MatchDetailsLive, :index
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", BoombWeb do
   #   pipe_through :api

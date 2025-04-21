@@ -1,0 +1,79 @@
+<div class="flex h-screen bg-gray-100">
+  <!-- Sidebar -->
+  <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto">
+    <h2 class="text-xl font-bold mb-4">Sports</h2>
+    <ul>
+      <%= for sport <- @sports do %>
+        <li
+          class={["py-2 px-4 rounded", sport == @selected_sport && "bg-gray-600" || "hover:bg-gray-700", "transition"]}
+          phx-click="select_sport"
+          phx-value-sport={sport}
+        >
+          <%= String.capitalize(to_string(sport)) %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="w-full p-4 overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold">Leagues</h1>
+      <div class="flex space-x-2">
+        <%= for filter <- @filters do %>
+          <button
+            class={["py-2 px-4 rounded", filter == @filter && "bg-blue-500 text-white" || "bg-gray-200 hover:bg-gray-300", "transition"]}
+            phx-click="select_filter"
+            phx-value-filter={filter}
+          >
+            <%= filter_label(filter) %>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <%= if @leagues == [] do %>
+      <p class="text-gray-500">No leagues available for the selected sport and filter.</p>
+    <% else %>
+      <div class="mb-4">
+        <button
+          class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
+          phx-click="select_all"
+        >
+          Select All
+        </button>
+        <button
+          class="ml-2 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition"
+          phx-click="validate_selection"
+        >
+          Validate Selection
+        </button>
+      </div>
+
+      <%= for {country, leagues, count} <- @leagues do %>
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-2 text-gray-900"><%= country %> (<%= count %>)</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <%= for league <- leagues do %>
+              <div class="flex items-center bg-gray-50 p-3 rounded shadow hover:bg-gray-100 transition">
+                <input
+                  type="checkbox"
+                  class="mr-2"
+                  phx-click="toggle_league"
+                  phx-value-league={"#{country}:#{league}"}
+                  checked={Map.has_key?(@selected_leagues, "#{country}:#{league}")}
+                />
+                <a
+                  href={~p"/pregame/matches?#{[sport: @selected_sport, filter: @filter, leagues: "#{country}:#{league}"]}"}
+                  class="text-gray-800 hover:underline"
+                >
+                  <%= league %>
+                </a>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

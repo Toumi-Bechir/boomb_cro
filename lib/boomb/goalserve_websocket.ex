@@ -105,11 +105,11 @@ defmodule Boomb.GoalserveWebsocket do
   defp handle_avl_message(data) do
     sport = data["sp"]
     available_event_ids = Enum.map(data["evts"], fn event -> event["id"] end)
-    Logger.info("Processing avl message for #{sport} with #{length(available_event_ids)} events")
+    #Logger.info("Processing avl message for #{sport} with #{length(available_event_ids)} events")
 
     existing_events = Boomb.Event.list_by_sport(sport)
     existing_event_ids = Enum.map(existing_events, fn event -> event.event_id end)
-    Logger.debug("Existing event IDs for #{sport}: #{length(existing_event_ids)}")
+    #Logger.debug("Existing event IDs for #{sport}: #{length(existing_event_ids)}")
 
     events_to_delete = existing_event_ids -- available_event_ids
     Enum.each(events_to_delete, fn event_id ->
@@ -135,11 +135,12 @@ defmodule Boomb.GoalserveWebsocket do
         period_code: event["pc"]
       }
     end)
-    Logger.debug("Upserting #{length(events)} events for #{sport}")
+    #Logger.debug("Upserting #{length(events)} events for #{sport}")
     Enum.each(events, fn event ->
       case Boomb.Event.upsert(event) do
         {:atomic, :ok} ->
-          Logger.debug("Upserted event #{event.event_id} for #{sport}")
+          ""
+          #Logger.debug("Upserted event #{event.event_id} for #{sport}")
         {:aborted, reason} ->
           Logger.error("Failed to upsert event #{event.event_id} for #{sport}: #{inspect(reason)}")
       end
@@ -147,10 +148,10 @@ defmodule Boomb.GoalserveWebsocket do
 
     sports = Boomb.Event.group_by_sport()
     event_count = length(Map.get(sports, sport, []))
-    Logger.info("Updated sports cache for #{sport} with #{event_count} events")
+    #Logger.info("Updated sports cache for #{sport} with #{event_count} events")
     if sport == "soccer" and event_count != @simulation_event_count do
       Logger.error("Expected #{@simulation_event_count} soccer events, but got #{event_count}")
-      Logger.debug("Sports data: #{inspect(sports, limit: 10)}")
+      #Logger.debug("Sports data: #{inspect(sports, limit: 10)}")
     end
     Phoenix.PubSub.broadcast(Boomb.PubSub, "events_available:#{sport}", %{events: events})
     Boomb.SportsCache.update_sports(sports)
