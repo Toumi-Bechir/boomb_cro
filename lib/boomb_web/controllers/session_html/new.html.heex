@@ -1,0 +1,18 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8 bg-white p-6 rounded-xl shadow-md">
+    <h1 class="text-3xl font-bold text-center text-zinc-800">Log In</h1>
+
+    <.simple_form :let={f} for={%{}} action={~p"/login"} as={:user} class="space-y-6">
+      <.input field={f[:email]} label="Email" type="email" value="" class="w-full" />
+      <.input field={f[:password]} label="Password" type="password" value="" class="w-full" />
+
+      <:actions>
+        <.button class="w-full">Log In</.button>
+      </:actions>
+    </.simple_form>
+
+    <p class="text-center text-sm text-zinc-600">
+      Don’t have an account? <.link navigate={~p"/register"} class="text-blue-600 hover:underline">Register</.link>
+    </p>
+  </div>
+</div>

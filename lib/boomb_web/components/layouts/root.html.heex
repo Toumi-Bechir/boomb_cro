@@ -1,17 +1,75 @@
+<!-- lib/boomb_web/layouts/root.html.heex -->
 <!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="Boomb" suffix=" · Croco">
-      {assigns[:page_title]}
-    </.live_title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+     <meta name="csrf-token" content={get_csrf_token()}/>
+    <title>Boomb</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}></script>
   </head>
-  <body class="bg-gray-900 text-gray-100 antialiased">
+  <body class="bg-gray-100">
+    <nav class="bg-green-900 text-white p-2">
+      <div class="flex items-center justify-between">
+        <button class="md:hidden bg-gray-700 text-white font-semibold rounded-full px-4 py-1 hover:bg-gray-600">
+          Promos
+        </button>
+        <div class="text-2xl font-bold mx-auto md:mx-0">
+          <.link navigate={~p"/"} class="text-white">boomb</.link>
+        </div>
+        <div class="flex space-x-2">
+          <button class="hidden md:flex bg-transparent text-white border border-white rounded-full w-8 h-8 items-center justify-center hover:bg-white hover:text-green-900">
+            🔍
+          </button>
+          <%= if @current_user do %>
+            <span class="text-sm text-white mr-4">Welcome, <%= @current_user.email %></span>
+            <.link
+              href={~p"/logout"}
+              method="delete"
+              data-confirm="Are you sure you want to log out?"
+              class="bg-transparent text-[#FFFFFF] border-[#FFFFFF] border font-semibold rounded-full hover:border-[#26FAB7] hover:text-[#26FAB7] w-[60px] h-[30px] flex items-center justify-center text-xs font-sans"
+            >
+              LOG OUT
+            </.link>
+          <% else %>
+            <.link
+              navigate={~p"/register"}
+              class="bg-yellow-500 text-green-900 font-semibold rounded-full px-4 py-1 hover:bg-yellow-400"
+            >
+              JOIN
+            </.link>
+            <.link
+              navigate={~p"/login"}
+              class="bg-gray-200 text-green-900 font-semibold rounded-full px-4 py-1 hover:bg-gray-300"
+            >
+              LOG IN
+            </.link>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row md:justify-center md:space-x-6 mt-2 md:mt-0">
+        <.link patch="/pregame" class="hover:text-gray-300 text-center">
+          ALL SPORTS
+        </.link>
+        <.link patch="/inplay" class="hover:text-gray-300 text-center">
+          LIVE IN GAME
+        </.link>
+        <a href="#" class="hover:text-gray-300 text-center">
+          CASINO
+        </a>
+      </div>
+
+      <div class="md:hidden mt-2">
+        <div class="flex items-center bg-gray-700 rounded-full px-3 py-1">
+          <span class="mr-2">🔍</span>
+          <span>Search</span>
+        </div>
+      </div>
+    </nav>
+    <.flash_group flash={@flash || @conn.flash || %{}} />
     <%= @inner_content %>
   </body>
 </html>

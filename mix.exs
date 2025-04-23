@@ -62,7 +62,8 @@ defmodule Boomb.MixProject do
       {:tesla, "~> 1.4"},
       {:websockex, "~> 0.4.3"},
       {:amnesia, "~> 0.2.8"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:argon2_elixir, "~> 4.0"}
     ]
   end
 
