@@ -5,6 +5,8 @@
     <.simple_form :let={f} for={%{}} action={~p"/login"} as={:user} class="space-y-6">
       <.input field={f[:email]} label="Email" type="email" value="" class="w-full" />
       <.input field={f[:password]} label="Password" type="password" value="" class="w-full" />
+      <!-- Add hidden input for return_to -->
+      <input type="hidden" name="user[return_to]" value={@return_to} />
 
       <:actions>
         <.button class="w-full">Log In</.button>

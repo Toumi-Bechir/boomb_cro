@@ -21,16 +21,18 @@ defmodule BoombWeb.SessionController do
     end
   end
 
-  def new(conn, _params) do
-    # Pass the return_to from session to the template if needed
-    return_to = get_session(conn, :return_to) || ~p"/"
+  def new(conn, params) do
+    # Ensure return_to is stored in session if passed via params
+    return_to = params["return_to"] || get_session(conn, :return_to) || ~p"/"
+    conn = put_session(conn, :return_to, return_to)
     render(conn, :new, return_to: return_to)
   end
 
- def create(conn, %{"user" => %{"email" => email, "password" => password}}) do
+def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
+    # Try to get return_to from form params (if passed), then session, then default to "/"
+    return_to = user_params["return_to"] || get_session(conn, :return_to) || ~p"/"
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
-        return_to = get_session(conn, :return_to) || ~p"/"
         conn
         |> put_session(:user_id, user.id)
         |> configure_session(renew: true)
@@ -41,7 +43,7 @@ defmodule BoombWeb.SessionController do
       {:error, _reason} ->
         conn
         |> put_flash(:error, "Invalid email or password.")
-        |> render(:new)
+        |> render(:new, return_to: return_to) # Pass return_to back to the form on error
     end
   end
 
@@ -49,6 +51,6 @@ defmodule BoombWeb.SessionController do
     conn
     |> configure_session(drop: true)
     |> put_flash(:info, "Logged out successfully.")
-    |> redirect(to: ~p"/")
+    |> redirect(to: ~p"/inplay")
   end
 end

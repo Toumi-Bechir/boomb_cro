@@ -3,7 +3,7 @@
   <div class="sticky top-0 z-10 bg-gray-800 text-white p-4 flex flex-col items-center">
     <div class="flex justify-between w-full max-w-7xl mx-auto">
       <a
-        href={~p"/pregame/sports?#{[sport: @sport, filter: @filter]}"}
+        href={~p"/pregame?#{[sport: @sport, filter: @filter]}"}
         class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
       >
         Back to Sports
@@ -87,9 +87,9 @@
         <h2 class="text-xl font-semibold mb-4 text-gray-900">Markets for <%= @selected_match.team1_name %> vs <%= @selected_match.team2_name %></h2>
         <%= if map_size(@selected_match.markets) == 0 do %>
           <p class="text-gray-500">No markets available for this match.</p>
-        <% else %><%= inspect @selected_match.markets%>
+        <% else %>
           <%= for {market_name, odds} <- @selected_match.markets do %>
-            <div class="mb-4" style="color:black;"><%= inspect odds%>
+            <div class="mb-4" style="color:black;">
               <button
                 class="w-full flex justify-between items-center bg-gray-700 text-white py-2 px-4 rounded hover:bg-gray-600 transition"
                 phx-click="toggle_market"

@@ -3,7 +3,7 @@
   <div class="sticky top-0 z-10 bg-gray-800 text-white p-4 flex justify-between items-center">
     <h1 class="text-xl font-bold">Matches for <%= String.capitalize(to_string(@sport)) %> - <%= filter_label(@filter) %></h1>
     <a
-      href={~p"/pregame/sports?#{[sport: @sport, filter: @filter]}"}
+      href={~p"/pregame?#{[sport: @sport, filter: @filter]}"}
       class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
     >
       Back to <%= String.capitalize(to_string(@sport)) %>

@@ -3,14 +3,24 @@ defmodule BoombWeb.Router do
 
   defmodule AuthPlug do
     import Plug.Conn
+    use Phoenix.VerifiedRoutes, endpoint: BoombWeb.Endpoint, router: BoombWeb.Router
     def init(opts), do: opts
     def call(conn, _opts) do
       if user_id = get_session(conn, :user_id) do
         user = Boomb.Accounts.get_user!(user_id)
         assign(conn, :current_user, user)
       else
+      # Only update return_to if the current path is not /login or /register
+       return_to = get_session(conn, :return_to) || ~p"/"
+       full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
+        new_return_to = 
+          if conn.request_path not in ["/login", "/register"] do
+           full_uri # conn.request_path
+          else
+            return_to
+          end
         conn
-        |> put_session(:return_to, conn.request_path)
+        |> put_session(:return_to, new_return_to)
         |> assign(:current_user, nil)
       end
     end
@@ -26,9 +36,10 @@ defmodule BoombWeb.Router do
       if get_session(conn, :user_id) do
         conn
       else
+      full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
         conn
-        |> put_session(:return_to, conn.request_path)
-        |> redirect(to: ~p"/login")
+        |> put_session(:return_to, full_uri)
+        |> redirect(to: ~p"/login?return_to=#{conn.request_path}")
         |> halt()
       end
     end
@@ -61,6 +72,7 @@ defmodule BoombWeb.Router do
     delete "/logout", SessionController, :delete
 
     # Public LiveView routes
+    live "/", OverviewLive
     live "/inplay", OverviewLive
     live "/event/:event_id", EventLive
     live "/test", TestLive
