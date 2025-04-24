@@ -8,6 +8,7 @@ defmodule Boomb.Accounts.User do
     field :password, :string, virtual: true # Virtual field for password input
     field :password_hash, :string
     field :active, :boolean, default: false
+    field :confirmation_token, :string
     #field :status, :string, default: "inactive" # For email verification
     #field :failed_login_attempts, :integer, default: 0
     #field :locked_until, :utc_datetime # For account locking
@@ -29,12 +30,20 @@ defmodule Boomb.Accounts.User do
     |> unique_constraint(:email)
     |> validate_length(:password, min: 8)
     |> put_password_hash()
+    |> put_confirmation_token()
   end
 
   def login_changeset(user, attrs) do
     user
-    |> cast(attrs, [:failed_login_attempts, :locked_until, :last_login_at, :last_login_ip, :last_login_location, :last_login_device, :local_timezone, :active_sessions])
+    |> cast(attrs, [:email]) #cast(attrs, [:failed_login_attempts, :locked_until, :last_login_at, :last_login_ip, :last_login_location, :last_login_device, :local_timezone, :active_sessions])
     |> validate_required([:email])
+  end
+
+  def confirm_changeset(user) do
+    user
+    |> cast(%{}, []) # No attrs needed for confirmation
+    |> put_change(:active, true)
+    |> put_change(:confirmation_token, nil) # Clear the token after confirmation
   end
 
   defp put_password_hash(changeset) do
@@ -45,4 +54,15 @@ defmodule Boomb.Accounts.User do
         changeset
     end
   end
+
+  defp put_confirmation_token(changeset) do
+    case changeset do
+      %Ecto.Changeset{valid?: true} ->
+        token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+        put_change(changeset, :confirmation_token, token)
+      _ ->
+        changeset
+    end
+  end
+  
 end

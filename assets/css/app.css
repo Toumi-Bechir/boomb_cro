@@ -3,3 +3,24 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+/* Custom scrollbar styles */
+.scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar::-webkit-scrollbar-track {
+    background: #282828;
+    border-radius: 4px;
+  }
+  
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 4px;
+  }
+  
+  /* Firefox support */
+  .scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #404040 #282828;
+  }

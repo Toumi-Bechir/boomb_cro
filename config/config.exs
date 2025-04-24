@@ -35,7 +35,14 @@ config :boomb, BoombWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :boomb, Boomb.Mailer, adapter: Swoosh.Adapters.Local
+#config :boomb, Boomb.Mailer, adapter: Swoosh.Adapters.Local
+
+# Swoosh configuration
+config :swoosh, :api_client, false
+
+# Mailer configuration
+config :boomb, Boomb.Mailer,
+  adapter: Swoosh.Adapters.Local # For dev;
 
 # Configure esbuild (the version is required)
 config :esbuild,

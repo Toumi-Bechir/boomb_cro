@@ -27,6 +27,8 @@ defmodule Boomb.Application do
       # {Boomb.Worker, arg},
       # Start to serve requests, typically the last entry
       BoombWeb.Endpoint,
+      
+
       Boomb.GoalserveToken,
       Boomb.SportsCache,
       #Boomb.OddsCache,

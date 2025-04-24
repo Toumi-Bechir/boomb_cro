@@ -4,21 +4,31 @@ defmodule BoombWeb.Router do
   defmodule AuthPlug do
     import Plug.Conn
     use Phoenix.VerifiedRoutes, endpoint: BoombWeb.Endpoint, router: BoombWeb.Router
+
     def init(opts), do: opts
     def call(conn, _opts) do
       if user_id = get_session(conn, :user_id) do
-        user = Boomb.Accounts.get_user!(user_id)
-        assign(conn, :current_user, user)
+        case Boomb.Accounts.get_user(user_id) do
+          nil ->
+            conn
+            |> configure_session(drop: true)
+            |> put_flash(:info, "Your session has expired. Please log in again.")
+            |> redirect(to: ~p"/login")
+            |> halt()
+
+          user ->
+            assign(conn, :current_user, user)
+        end
       else
-      # Only update return_to if the current path is not /login or /register
-       return_to = get_session(conn, :return_to) || ~p"/"
-       full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
-        new_return_to = 
+        full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
+        return_to = get_session(conn, :return_to) || ~p"/"
+        new_return_to =
           if conn.request_path not in ["/login", "/register"] do
-           full_uri # conn.request_path
+            full_uri
           else
             return_to
           end
+
         conn
         |> put_session(:return_to, new_return_to)
         |> assign(:current_user, nil)
@@ -70,6 +80,7 @@ defmodule BoombWeb.Router do
     get "/login", SessionController, :new
     post "/login", SessionController, :create
     delete "/logout", SessionController, :delete
+    get "/confirm", SessionController, :confirm # New route for confirmation
 
     # Public LiveView routes
     live "/", OverviewLive
