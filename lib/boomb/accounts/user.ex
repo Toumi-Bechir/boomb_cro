@@ -10,8 +10,8 @@ defmodule Boomb.Accounts.User do
     field :active, :boolean, default: false
     field :confirmation_token, :string
     #field :status, :string, default: "inactive" # For email verification
-    #field :failed_login_attempts, :integer, default: 0
-    #field :locked_until, :utc_datetime # For account locking
+    field :failed_login_attempts, :integer, default: 0
+    field :locked_until, :utc_datetime # For account locking
     #field :last_login_at, :utc_datetime
     #field :last_login_ip, :string
     #field :last_login_location, :string
@@ -35,8 +35,9 @@ defmodule Boomb.Accounts.User do
 
   def login_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email]) #cast(attrs, [:failed_login_attempts, :locked_until, :last_login_at, :last_login_ip, :last_login_location, :last_login_device, :local_timezone, :active_sessions])
+    |> cast(attrs, [:email, :failed_login_attempts, :locked_until]) #cast(attrs, [:failed_login_attempts, :locked_until, :last_login_at, :last_login_ip, :last_login_location, :last_login_device, :local_timezone, :active_sessions])
     |> validate_required([:email])
+    |> validate_number(:failed_login_attempts, greater_than_or_equal_to: 0) # Ensure attempts is non-negative
   end
 
   def confirm_changeset(user) do

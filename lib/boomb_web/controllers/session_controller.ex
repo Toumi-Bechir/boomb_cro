@@ -19,7 +19,6 @@ defmodule BoombWeb.SessionController do
         |> redirect(to: ~p"/login")
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        # Construct the error message from changeset errors
         error_message =
           changeset.errors
           |> Enum.map(fn {field, {msg, _opts}} -> "#{field}: #{msg}" end)
@@ -54,12 +53,19 @@ defmodule BoombWeb.SessionController do
       {:ok, user} ->
         UserLogger.log_attempt(conn, "login", "success", user)
         conn
-        |> clear_flash() # Clear previous flash messages
+        |> clear_flash()
         |> put_session(:user_id, user.id)
         |> configure_session(renew: true)
         |> delete_session(:return_to)
         |> put_flash(:info, "Logged in successfully!")
         |> redirect(to: redirect_path)
+
+      {:error, :account_locked} ->
+        UserLogger.log_attempt(conn, "login", "failure", nil, "Account is locked due to too many failed attempts")
+        conn
+        |> clear_flash()
+        |> put_flash(:error, "Your account is locked due to too many failed login attempts. Please try again later.")
+        |> render(:new, return_to: return_to)
 
       {:error, :account_not_confirmed} ->
         UserLogger.log_attempt(conn, "login", "failure", nil, "Account not confirmed")

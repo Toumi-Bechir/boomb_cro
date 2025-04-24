@@ -48,6 +48,11 @@ config :geoip,
   provider: :ip2locationio,
   api_key: "F663B9A13187BA93AABEFD3002235D9A"
 
+config :boomb, :rate_limiting,
+  max_failed_attempts: 3, # Maximum failed login attempts before locking
+  lock_duration_minutes: 1 # Duration in minutes for the account lock
+
+  
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",
