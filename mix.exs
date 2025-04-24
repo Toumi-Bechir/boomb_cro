@@ -63,7 +63,9 @@ defmodule Boomb.MixProject do
       {:websockex, "~> 0.4.3"},
       {:amnesia, "~> 0.2.8"},
       {:timex, "~> 3.7"},
-      {:argon2_elixir, "~> 4.0"}
+      {:argon2_elixir, "~> 4.0"},
+      {:geoip, git: "https://github.com/navinpeiris/geoip.git"}, # For geolocation
+      {:ua_inspector, "~> 3.1"}
     ]
   end
 

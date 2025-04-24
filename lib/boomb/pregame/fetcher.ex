@@ -231,19 +231,45 @@ defmodule Boomb.Pregame.PregameFetcher do
           match_id = match["id"]
           start_time = parse_timestamp(match)
           if start_time > now do
-            record = {
-              table,
-              match_id,
-              start_time,
-              match["localteam"]["name"] || match["player_1"]["name"] || "Unknown",
-              match["visitorteam"]["name"] || match["player_2"]["name"] || "Unknown",
-              country,
-              league,
-              parse_markets(match["odds"]),
-              match["stats"] || %{},
-              now
-            }
-            :mnesia.write(table, record, :write)
+            # Check if the match already exists in Mnesia
+            existing_match = :mnesia.read({table, match_id})
+
+            new_record =
+              case existing_match do
+                [] ->
+                  # New match, create a full record
+                  {
+                    table,
+                    match_id,
+                    start_time,
+                    match["localteam"]["name"] || match["player_1"]["name"] || "Unknown",
+                    match["visitorteam"]["name"] || match["player_2"]["name"] || "Unknown",
+                    country,
+                    league,
+                    parse_markets(match["odds"]),
+                    match["stats"] || %{},
+                    now
+                  }
+                [{_table, _match_id, existing_start_time, team1, team2, existing_country, existing_league, existing_markets, stats, _updated_at}] ->
+                  # Existing match, merge markets
+                  new_markets = parse_markets(match["odds"])
+                  # Merge new markets with existing ones, updating if present, adding if new
+                  merged_markets = Map.merge(existing_markets, new_markets, fn _k, existing, new -> new end)
+                  {
+                    table,
+                    match_id,
+                    existing_start_time,
+                    team1,
+                    team2,
+                    existing_country,
+                    existing_league,
+                    merged_markets,
+                    stats,
+                    now
+                  }
+              end
+
+            :mnesia.write(table, new_record, :write)
           else
             Logger.debug("Skipping match #{match_id} with past or invalid start_time: #{start_time}")
           end
@@ -252,7 +278,7 @@ defmodule Boomb.Pregame.PregameFetcher do
     end)
 
     case result do
-      {:atomic, :ok} -> Logger.info("Stored #{match_count} matches for #{sport}")
+      {:atomic, :ok} -> Logger.info("Stored/Updated #{match_count} matches for #{sport}")
       {:aborted, reason} -> Logger.error("Failed to store matches for #{sport}: #{inspect(reason)}")
     end
   end

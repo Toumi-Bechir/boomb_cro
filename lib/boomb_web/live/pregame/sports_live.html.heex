@@ -6,10 +6,15 @@
     <ul class="-mx-4">
       <%= for sport <- @sports do %>
         <li
-          class={["block w-full py-2 px-4 rounded bg-transparent transition hover:bg-gray-700", sport == @selected_sport && "bg-gray-600" || "hover:bg-gray-700", "transition"]}
+          class={["block w-full flex items-center font-semibold py-2 px-4 rounded
+           bg-transparent transition
+           hover:text-[#00DFA9]", sport == @selected_sport && "bg-gray-600" || 
+           "hover:text-[#00DFA9]", "transition"]}
           phx-click="select_sport"
           phx-value-sport={sport}
         >
+                  <img src={"/images/#{sport}.svg"} class="h-[20px] w-[20px]  mr-2" />
+
           <%= String.capitalize(to_string(sport)) %>
         </li>
       <% end %>

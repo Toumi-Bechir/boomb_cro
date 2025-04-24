@@ -29,8 +29,7 @@ defmodule BoombWeb.SessionController do
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
     return_to = user_params["return_to"] || get_session(conn, :return_to) || ~p"/"
-    # Debug: Inspect the flash before clearing
-    IO.inspect(conn.assigns.flash, label: "Flash before clear")
+    IO.inspect(return_to, label: "Initial return_to")
 
     # Determine the redirect path
     redirect_path =
@@ -40,21 +39,16 @@ defmodule BoombWeb.SessionController do
         return_to
       end
 
-    # Debug: Inspect the redirect path
     IO.inspect(redirect_path, label: "Redirect path")
 
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
         conn
         |> clear_flash() # Clear previous flash messages
-        # Debug: Inspect the flash after clearing
-        |> tap(fn conn -> IO.inspect(conn.assigns.flash, label: "Flash after clear") end)
         |> put_session(:user_id, user.id)
         |> configure_session(renew: true)
         |> delete_session(:return_to)
         |> put_flash(:info, "Logged in successfully!")
-        # Debug: Inspect the flash after setting new message
-        |> tap(fn conn -> IO.inspect(conn.assigns.flash, label: "Flash after setting new message") end)
         |> redirect(to: redirect_path)
 
       {:error, :account_not_confirmed} ->

@@ -21,14 +21,14 @@ defmodule BoombWeb.Router do
         end
       else
         full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
-        return_to = get_session(conn, :return_to) || ~p"/"
+        return_to = get_session(conn, :return_to) || ~p"/inplay"
         new_return_to =
-          if conn.request_path not in ["/login", "/register"] do
+          if conn.request_path not in ["/login", "/register", "/confirm", "/dev/mailbox/assets/app.css"] do 
             full_uri
           else
             return_to
           end
-
+IO.puts "----------return _to:---#{return_to}-----new_return_to--#{new_return_to}--------"
         conn
         |> put_session(:return_to, new_return_to)
         |> assign(:current_user, nil)
@@ -38,7 +38,6 @@ defmodule BoombWeb.Router do
 
   defmodule EnsureAuthPlug do
     import Plug.Conn
-    # Import Phoenix.VerifiedRoutes to use ~p sigil
     use Phoenix.VerifiedRoutes, endpoint: BoombWeb.Endpoint, router: BoombWeb.Router
 
     def init(opts), do: opts
@@ -46,10 +45,10 @@ defmodule BoombWeb.Router do
       if get_session(conn, :user_id) do
         conn
       else
-      full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
+        full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
         conn
         |> put_session(:return_to, full_uri)
-        |> redirect(to: ~p"/login?return_to=#{conn.request_path}")
+        |> redirect(to: ~p"/login?return_to=#{full_uri}")
         |> halt()
       end
     end
@@ -58,16 +57,16 @@ defmodule BoombWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
-    plug :fetch_live_flash
+    plug :fetch_flash # Ensure this is present for controllers
+    plug :fetch_live_flash # Ensure this is present for LiveView
     plug :put_root_layout, html: {BoombWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug AuthPlug # Always run to set current_user and store return_to
+    plug AuthPlug
   end
 
   pipeline :ensure_auth do
-    plug EnsureAuthPlug # Only redirect if not logged in
+    plug EnsureAuthPlug
   end
 
   # Public routes (no authentication required)

@@ -44,6 +44,10 @@ config :swoosh, :api_client, false
 config :boomb, Boomb.Mailer,
   adapter: Swoosh.Adapters.Local # For dev;
 
+config :geoip,
+  provider: :ip2locationio,
+  api_key: "F663B9A13187BA93AABEFD3002235D9A"
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",
