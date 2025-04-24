@@ -3,6 +3,7 @@ defmodule BoombWeb.SessionController do
 
   alias Boomb.Accounts
   alias Boomb.Accounts.User
+  alias Boomb.UserLogger
 
   def new_registration(conn, _params) do
     changeset = Accounts.change_user_registration(%User{})
@@ -11,12 +12,20 @@ defmodule BoombWeb.SessionController do
 
   def create_registration(conn, %{"user" => user_params}) do
     case Accounts.register_user(user_params) do
-      {:ok, _user} ->
+      {:ok, user} ->
+        UserLogger.log_attempt(conn, "registration", "success", user)
         conn
         |> put_flash(:info, "Registration successful! Please check your email to confirm your account.")
         |> redirect(to: ~p"/login")
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        # Construct the error message from changeset errors
+        error_message =
+          changeset.errors
+          |> Enum.map(fn {field, {msg, _opts}} -> "#{field}: #{msg}" end)
+          |> Enum.join(", ")
+
+        UserLogger.log_attempt(conn, "registration", "failure", nil, error_message)
         render(conn, :new_registration, changeset: changeset)
     end
   end
@@ -43,6 +52,7 @@ defmodule BoombWeb.SessionController do
 
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
+        UserLogger.log_attempt(conn, "login", "success", user)
         conn
         |> clear_flash() # Clear previous flash messages
         |> put_session(:user_id, user.id)
@@ -52,12 +62,14 @@ defmodule BoombWeb.SessionController do
         |> redirect(to: redirect_path)
 
       {:error, :account_not_confirmed} ->
+        UserLogger.log_attempt(conn, "login", "failure", nil, "Account not confirmed")
         conn
         |> clear_flash()
         |> put_flash(:error, "Please confirm your account via the email link before logging in.")
         |> render(:new, return_to: return_to)
 
       {:error, _reason} ->
+        UserLogger.log_attempt(conn, "login", "failure", nil, "Invalid email or password")
         conn
         |> clear_flash()
         |> put_flash(:error, "Invalid email or password.")

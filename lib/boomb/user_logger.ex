@@ -73,13 +73,13 @@ defmodule Boomb.UserLogger do
 
       user_agent ->
         case UAInspector.parse(user_agent) do
-          %UAInspector.Result{device: device, os: os, user_agent: ua} ->
+          %UAInspector.Result{device: device, os: os, client: client} ->
             %{
-              device: device.brand,
-              device_type: device.type,
-              os: os.name,
-              browser: ua.client.name,
-              browser_version: if(ua.client.version, do: to_string(ua.client.version))
+              device: if(device && device != :unknown, do: device.brand),
+              device_type: if(device && device != :unknown, do: device.type),
+              os: if(os && os != :unknown, do: os.name),
+              browser: if(client && client != :unknown, do: client.name),
+              browser_version: if(client && client != :unknown && client.version, do: to_string(client.version))
             }
 
           _ ->
