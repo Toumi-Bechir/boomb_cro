@@ -52,7 +52,10 @@ config :boomb, :rate_limiting,
   max_failed_attempts: 3, # Maximum failed login attempts before locking
   lock_duration_minutes: 1 # Duration in minutes for the account lock
 
-  
+  config :boomb, :session_management,
+  session_expiry_minutes: 3,
+  max_concurrent_sessions: 1
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",

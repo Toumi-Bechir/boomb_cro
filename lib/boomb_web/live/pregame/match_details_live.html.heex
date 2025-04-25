@@ -1,33 +1,48 @@
 <div class="flex flex-col h-screen bg-gray-100">
   <!-- Sticky Header -->
-  <div class="sticky top-0 z-10 bg-gray-800 text-white p-4 flex flex-col items-center">
-    <div class="flex justify-between w-full max-w-7xl mx-auto">
-      <a
-        href={~p"/pregame?#{[sport: @sport, filter: @filter]}"}
-        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-      >
-        Back to Sports
-      </a>
-      <div class="text-center">
-        <h1 class="text-xl font-bold">
-          <%= if @selected_match do %>
-            <%= @selected_match.team1_name %> vs <%= @selected_match.team2_name %>
-          <% else %>
-            No Match Selected
-          <% end %>
-        </h1>
+<div class="sticky top-0 z-10 bg-[#1F2937] border-b border-[#374151] shadow-sm">
+  <div class="flex justify-between items-center w-full max-w-7xl mx-auto px-4 py-3">
+    <!-- Back Button -->
+    <a
+      href={~p"/pregame?#{[sport: @sport, filter: @filter]}"}
+      class="text-[#00DFA9] hover:text-[#00FFB6] text-sm font-medium transition-colors flex items-center gap-1"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Sports
+    </a>
+
+    <!-- Match Info -->
+    <div class="text-center px-4">
+      <h1 class="text-[15px] font-semibold text-gray-100 truncate max-w-xs sm:max-w-md">
         <%= if @selected_match do %>
-          <p class="text-sm"><%= format_datetime(@selected_match.start_time) %></p>
+          <span class="text-gray-300"><%= @selected_match.team1_name %></span>
+          <span class="text-gray-400 mx-1">vs</span>
+          <span class="text-gray-300"><%= @selected_match.team2_name %></span>
+        <% else %>
+          <span class="text-gray-400">No Match Selected</span>
         <% end %>
-      </div>
-      <a
-        href={~p"/pregame/matches?#{[sport: @sport, filter: @filter, leagues: Enum.map(@leagues, fn {c, l} -> "#{c}:#{l}" end)]}"}
-        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-      >
-        Back to Matches
-      </a>
+      </h1>
+      <%= if @selected_match do %>
+        <p class="text-xs text-gray-400 mt-0.5">
+          <%= format_datetime(@selected_match.start_time) %>
+        </p>
+      <% end %>
     </div>
+
+    <!-- Matches Button -->
+    <a
+      href={~p"/pregame/matches?#{[sport: @sport, filter: @filter, leagues: Enum.map(@leagues, fn {c, l} -> "#{c}:#{l}" end)]}"}
+      class="text-[#00DFA9] hover:text-[#00FFB6] text-sm font-medium transition-colors flex items-center gap-1"
+    >
+      Matches
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+      </svg>
+    </a>
   </div>
+</div>
 
   <!-- Main Content -->
   <div class="flex-1 flex flex-col md:flex-row w-full p-4 gap-4">

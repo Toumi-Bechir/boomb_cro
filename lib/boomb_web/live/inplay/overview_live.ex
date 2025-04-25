@@ -28,7 +28,7 @@ defmodule BoombWeb.OverviewLive do
 
   def handle_event("filter_by_sport", %{"sport" => sport}, socket) do
     IO.puts "---------------handle event filter   -------#{inspect sport}---- --------------------------"
-    selected_sport = if sport == socket.assigns.selected_sport, do: nil, else: sport
+    selected_sport = if sport == socket.assigns.selected_sport, do: "soccer", else: sport
     sports_data = Boomb.SportsCache.get_sports()
     events_by_competition = organize_events_by_competition(sports_data, selected_sport)
     events_by_competition = update_event_subscriptions(socket.assigns.events_by_competition, events_by_competition, socket.assigns.sports)

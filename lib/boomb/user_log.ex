@@ -7,7 +7,6 @@ defmodule Boomb.UserLog do
     field :action, :string
     field :status, :string
     field :ip_address, :string
-    field :attempts
     field :local_time, :string
     field :timezone, :string
     field :city, :string
@@ -21,6 +20,7 @@ defmodule Boomb.UserLog do
     field :os, :string
     field :browser, :string
     field :browser_version, :string
+    field :session_token, :string # Ensure this field is present
     field :error_message, :string
 
     timestamps()
@@ -46,6 +46,7 @@ defmodule Boomb.UserLog do
       :os,
       :browser,
       :browser_version,
+      :session_token,
       :error_message
     ])
     |> validate_required([:action, :status])

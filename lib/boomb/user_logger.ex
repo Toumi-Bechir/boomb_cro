@@ -4,16 +4,14 @@ defmodule Boomb.UserLogger do
   alias Boomb.UserLog
   alias UAInspector
 
-  # Log user information for registration or login attempts
-  def log_attempt(conn, action, status, user \\ nil, error_message \\ nil) do
-    # Extract user information
+  # Define log_attempt/6 to include session_token
+  def log_attempt(conn, action, status, user \\ nil, error_message \\ nil, session_token \\ nil) do
     ip_address = get_ip_address(conn)
     user_agent = get_user_agent(conn)
     device_info = parse_user_agent(user_agent)
     geo_info = get_geolocation(ip_address)
     local_time = get_local_time(conn)
 
-    # Prepare log attributes
     attrs = %{
       user_id: if(user, do: user.id, else: nil),
       action: action,
@@ -32,10 +30,10 @@ defmodule Boomb.UserLogger do
       os: device_info[:os],
       browser: device_info[:browser],
       browser_version: device_info[:browser_version],
+      session_token: session_token, # Include session_token in the log
       error_message: error_message
     }
 
-    # Insert the log entry
     %UserLog{}
     |> UserLog.changeset(attrs)
     |> Repo.insert()

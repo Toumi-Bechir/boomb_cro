@@ -4,31 +4,42 @@ defmodule BoombWeb.Router do
   defmodule AuthPlug do
     import Plug.Conn
     use Phoenix.VerifiedRoutes, endpoint: BoombWeb.Endpoint, router: BoombWeb.Router
+    alias Boomb.Accounts  # Add this line to alias the correct module
 
     def init(opts), do: opts
+
     def call(conn, _opts) do
-      if user_id = get_session(conn, :user_id) do
-        case Boomb.Accounts.get_user(user_id) do
-          nil ->
+      if session_token = get_session(conn, :session_token) do
+        case Accounts.validate_session(session_token) do
+          {:ok, user} ->
+            conn
+            |> assign(:current_user, user)
+            |> put_session(:user_id, user.id)
+
+          {:error, :invalid_session} ->
             conn
             |> configure_session(drop: true)
-            |> put_flash(:info, "Your session has expired. Please log in again.")
+            |> put_flash(:error, "Your session is invalid. Please log in again.")
             |> redirect(to: ~p"/login")
             |> halt()
 
-          user ->
-            assign(conn, :current_user, user)
+          {:error, :session_expired} ->
+            conn
+            |> configure_session(drop: true)
+            |> put_flash(:error, "Your session has expired. Please log in again.")
+            |> redirect(to: ~p"/login")
+            |> halt()
         end
       else
         full_uri = conn.request_path <> if(conn.query_string != "", do: "?" <> conn.query_string, else: "")
-        return_to = get_session(conn, :return_to) || ~p"/inplay"
+        return_to = get_session(conn, :return_to) || ~p"/"
         new_return_to =
-          if conn.request_path not in ["/login", "/register", "/confirm", "/dev/mailbox/assets/app.css"] do 
+          if conn.request_path not in ["/login", "/register"] do
             full_uri
           else
             return_to
           end
-IO.puts "----------return _to:---#{return_to}-----new_return_to--#{new_return_to}--------"
+
         conn
         |> put_session(:return_to, new_return_to)
         |> assign(:current_user, nil)

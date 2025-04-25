@@ -24,3 +24,29 @@
     scrollbar-width: thin;
     scrollbar-color: #404040 #282828;
   }
+  @tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Scrollbar Styling */
+@layer base {
+  /* For Chrome/Safari/Edge */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #282828; /* Track color */
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #404040; /* Thumb color */
+    border-radius: 4px;
+  }
+
+  /* For Firefox */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #404040 #282828; /* thumb track */
+  }
+}

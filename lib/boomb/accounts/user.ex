@@ -1,23 +1,17 @@
-# lib/boomb/accounts/user.ex
 defmodule Boomb.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
   schema "users" do
     field :email, :string
-    field :password, :string, virtual: true # Virtual field for password input
+    field :password, :string, virtual: true
     field :password_hash, :string
     field :active, :boolean, default: false
     field :confirmation_token, :string
-    #field :status, :string, default: "inactive" # For email verification
     field :failed_login_attempts, :integer, default: 0
-    field :locked_until, :utc_datetime # For account locking
-    #field :last_login_at, :utc_datetime
-    #field :last_login_ip, :string
-    #field :last_login_location, :string
-    #field :last_login_device, :string
-    #field :local_timezone, :string
-    #field :active_sessions, {:array, :string}, default: [] # Store session tokens
+    field :locked_until, :utc_datetime
+    field :active_sessions, Boomb.Types.JsonArray, default: []
+    field :session_expiry_minutes, :integer, default: nil # User-specific session expiry
 
     timestamps()
   end
@@ -35,22 +29,22 @@ defmodule Boomb.Accounts.User do
 
   def login_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :failed_login_attempts, :locked_until]) #cast(attrs, [:failed_login_attempts, :locked_until, :last_login_at, :last_login_ip, :last_login_location, :last_login_device, :local_timezone, :active_sessions])
+    |> cast(attrs, [:email, :failed_login_attempts, :locked_until, :active_sessions, :session_expiry_minutes])
     |> validate_required([:email])
-    |> validate_number(:failed_login_attempts, greater_than_or_equal_to: 0) # Ensure attempts is non-negative
+    |> validate_number(:failed_login_attempts, greater_than_or_equal_to: 0)
   end
 
   def confirm_changeset(user) do
     user
-    |> cast(%{}, []) # No attrs needed for confirmation
+    |> cast(%{}, [])
     |> put_change(:active, true)
-    |> put_change(:confirmation_token, nil) # Clear the token after confirmation
+    |> put_change(:confirmation_token, nil)
   end
 
   defp put_password_hash(changeset) do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: password}} ->
-        put_change(changeset, :password_hash,Argon2.hash_pwd_salt(password))
+        put_change(changeset, :password_hash, Argon2.hash_pwd_salt(password))
       _ ->
         changeset
     end
@@ -65,5 +59,4 @@ defmodule Boomb.Accounts.User do
         changeset
     end
   end
-  
 end
