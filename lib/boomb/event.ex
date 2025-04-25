@@ -33,7 +33,6 @@ defmodule Boomb.Event do
   def upsert(attrs) do
     :mnesia.transaction(fn ->
       event = :mnesia.read({@table_name, attrs.event_id})
-      # Ensure all fields are provided with defaults if not present
       event_id = attrs.event_id
       sport = Map.get(attrs, :sport, "unknown")
       mid = Map.get(attrs, :mid, nil)
@@ -46,7 +45,6 @@ defmodule Boomb.Event do
 
       record = case event do
         [] ->
-          # Create a new event record with defaults
           {@table_name,
            event_id,
            sport,
@@ -60,7 +58,6 @@ defmodule Boomb.Event do
            DateTime.utc_now(),
            DateTime.utc_now()}
         [{@table_name, event_id, existing_sport, existing_mid, existing_competition_id, existing_competition_name, existing_team1, existing_team2, existing_provider_id, _existing_period_code, inserted_at, _updated_at}] ->
-          # Update existing event, preserving fields unless new data is provided
           {@table_name,
            event_id,
            sport || existing_sport,

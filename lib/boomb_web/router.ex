@@ -94,9 +94,18 @@ defmodule BoombWeb.Router do
 
     # Public LiveView routes
     live "/", OverviewLive
-    live "/inplay", OverviewLive
-    live "/event/:event_id", EventLive
+    #live "/inplay", OverviewLive
+    #live "/event/:event_id", EventLive
     live "/test", TestLive
+  end
+
+  live_session :default do
+    scope "/", BoombWeb do
+      pipe_through :browser
+      live "/inplay", OverviewLive, :index
+      live "/event/:event_id", EventLive, :show
+
+    end
   end
 
   # Protected routes requiring authentication
