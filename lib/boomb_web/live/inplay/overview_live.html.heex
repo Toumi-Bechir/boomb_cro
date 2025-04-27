@@ -87,20 +87,33 @@
                         LIVE
                       <% end %>
                     </td>
-                    <%= with market <- get_market_odds(odds_data, "1777", %{"1" => "-", "X" => "-", "2" => "-"}) do %>
+                    
+                    <% 
+                      filtered_market = if @odds[event.event_id] && @odds[event.event_id].odds do
+                          if @odds[event.event_id].odds.odds do
+                               Enum.map(@odds[event.event_id].odds.odds, fn %{blocked: blocked, value: value} -> {blocked, value} end)
+                          end
+                      else
+                        nil
+                      end
+                    %>
+                    <%= with market <- filtered_market do %>
+                    <% {block, value} = if market do Enum.at(market,0) else {false, "--"} end %>
                       <td class="p-2 text-center">
                         <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
-                          <%= market["1"] %>
+                        <%= inspect block %>:<%= value %>
                         </button>
                       </td>
+                      <% {block, value} = if market do Enum.at(market,1) else {false, "--"} end %>
                       <td class="p-2 text-center">
                         <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
-                          <%= market["X"] %>
+                          <%= inspect block %>:<%= value %>
                         </button>
                       </td>
+                      <% {block, value} = if market do Enum.at(market,2) else {false, "--"} end %>
                       <td class="p-2 text-center">
                         <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
-                          <%= market["2"] %>
+                          <%= inspect block %>:<%= value %>
                         </button>
                       </td>
                     <% end %>

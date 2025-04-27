@@ -3,6 +3,7 @@ defmodule BoombWeb.EventLive do
 
   def mount(%{"event_id" => event_id}, _session, socket) do
     sports = ["soccer", "basket", "tennis", "baseball", "amfootball", "hockey", "volleyball"]
+    IO.puts "-------------------------mount in event live -----------------------------"
     if connected?(socket) do
       Enum.each(sports, fn sport ->
         Phoenix.PubSub.subscribe(Boomb.PubSub, "events_available:#{sport}")
@@ -50,6 +51,41 @@ defmodule BoombWeb.EventLive do
     expanded_sport = if socket.assigns.expanded_sport == sport, do: nil, else: sport
     {:noreply, assign(socket, expanded_sport: expanded_sport)}
   end
+  def handle_params(params, uri, socket) do
+
+    event_id = params["event_id"]
+    IO.puts "------------------ handle paramd --------------------------"
+    sports = socket.assigns.sports
+    Enum.each(sports, fn sport ->
+      Phoenix.PubSub.unsubscribe(Boomb.PubSub, "odds_update:#{sport}:#{socket.assigns.selected_event_id}")
+    end)
+
+    Enum.each(sports, fn sport ->
+      Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
+    end)
+
+    event = case Boomb.Event.get(event_id) do
+      {:ok, event} -> event
+      {:error, _} -> nil
+    end
+
+    odds = case Boomb.OddsCache.get_odds(event_id) do
+      {:ok, odds_data} ->
+        Map.merge(%{state: nil, ball_position: nil}, odds_data)
+      {:error, _} ->
+        %{state: nil, ball_position: nil}
+    end
+
+    expanded_sport = if event, do: event.sport, else: socket.assigns.expanded_sport
+
+    {:noreply, assign(socket,
+      selected_event_id: event_id,
+      event: event,
+      odds: odds,
+      expanded_sport: expanded_sport
+    )}
+  end
+
 
   def handle_event("select_event", %{"event_id" => event_id}, socket) do
     sports = socket.assigns.sports
@@ -327,37 +363,41 @@ defmodule BoombWeb.EventLive do
                       <div class="flex items-center space-x-2 text-gray-300 text-sm">
                         <span class="truncate"><%= comp_name %></span>
                       </div>
-                      <div class="mt-1 space-y-1">
-                        <%= for event <- events do %>
-                          <a
-                            href={~p"/event/#{event.event_id}"}
-                            phx-click="select_event"
-                            phx-value-event_id={event.event_id}
-                            class={"block p-2 rounded text-gray-200 hover:bg-[#3a586a] flex justify-between items-center #{if @selected_event_id == event.event_id, do: "bg-[#3a586a]", else: ""}"}
-                          >
-                            <div class="flex items-center space-x-2">
-                              <span class="truncate text-sm"><%= event.team1 %></span>
-                              <span class="text-xs text-gray-400">vs</span>
-                              <span class="truncate text-sm"><%= event.team2 %></span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                              <%= if odds_data = @all_odds[event.event_id] do %>
-                                <span class="text-sm"><%= Map.get(odds_data, :score, "0:0") %></span>
-                                <%= if sport in ["soccer", "hockey", "volleyball"] do %>
-                                  <span class="text-xs text-gray-400">
-                                    <%= format_time(Map.get(odds_data, :period_time, 0)) %>
-                                  </span>
-                                <% end %>
-                              <% else %>
-                                <span class="text-sm">0:0</span>
-                                <%= if sport in ["soccer", "hockey", "volleyball"] do %>
-                                  <span class="text-xs text-gray-400">00:00</span>
-                                <% end %>
-                              <% end %>
-                            </div>
-                          </a>
-                        <% end %>
-                      </div>
+                     <div class="mt-1 space-y-1">
+  <%= for event <- events do %>
+  
+    
+    
+      <!-- Team 1 on its own line -->
+      <div class="flex justify-between items-center">
+        <span class="truncate text-sm">
+        <%= live_patch(event.team1, to: URI.parse("/event/#{event.event_id}")) %>
+        </span>
+        <%= if odds_data = @all_odds[event.event_id] do %>
+          <span class="text-sm"><%= Map.get(odds_data, :score, "0:0") %></span>
+        <% else %>
+          <span class="text-sm">0:0</span>
+        <% end %>
+      </div>
+      
+      <!-- Team 2 on its own line -->
+      <div class="flex justify-between items-center mt-1">
+        <span class="truncate text-sm">
+        <%= live_patch(event.team2, to: URI.parse("/event/#{event.event_id}")) %>
+        </span>
+        <%= if sport in ["soccer", "hockey", "volleyball"] do %>
+          <%= if odds_data = @all_odds[event.event_id] do %>
+            <span class="text-xs text-gray-400">
+              <%= format_time(Map.get(odds_data, :period_time, 0)) %>
+            </span>
+          <% else %>
+            <span class="text-xs text-gray-400">00:00</span>
+          <% end %>
+        <% end %>
+      </div>
+    
+  <% end %>
+</div>
                     </div>
                   <% end %>
                 </div>
