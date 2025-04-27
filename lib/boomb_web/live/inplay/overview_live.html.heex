@@ -3,9 +3,7 @@
   <nav class="bg-[#185327] p-1 shadow-md sticky top-0 z-10">
     <div class="flex space-x-1 overflow-x-auto scrollbar-thin scrollbar-thumb-[#2d6b3d] scrollbar-track-[#185327]">
       <button
-        phx-click="filter_by_sport"
-        phx-value-sport="all"
-        class={"flex items-center space-x-1 px-3 py-1 rounded-sm text-sm font-bold #{if @selected_sport == nil, do: "bg-white text-[#185327]", else: "bg-[#185327] text-white hover:bg-[#2d6b3d]"}"}
+        class={"flex items-center space-x-1 px-3 py-1 rounded-sm text-sm font-bold bg-[#2d6b3d]"}
       >
         <span>ALL</span>
         <span class="bg-[#0d2235] text-white rounded-full px-1.5 py-0.5 text-xs">

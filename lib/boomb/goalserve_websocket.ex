@@ -190,10 +190,11 @@ defmodule Boomb.GoalserveWebsocket do
       ball_position: data["xy"]
     }
     Boomb.OddsCache.update_odds(event_id, odds_data)
-    Boomb.OddsThrottler.update_odds(event_id, %{
+
+    Boomb.OddsThrottler.update_odds_foroverview(event_id, %{
       event_id: event_id,
       sport: sport,
-      odds: odds,
+      odds: Map.get(odds, 1777),
       stats: data["stats"],
       comments: data["cms"],
       period_time: parse_time(sport, data),
@@ -201,6 +202,19 @@ defmodule Boomb.GoalserveWebsocket do
       state: data["sc"],
       ball_position: data["xy"]
     })
+    
+      Boomb.OddsThrottler.update_odds(event_id, %{
+      event_id: event_id,
+      sport: sport,
+      odds: odds, #Map.get(odds, 1777),
+      stats: data["stats"],
+      comments: data["cms"],
+      period_time: parse_time(sport, data),
+      score: parse_score(sport, data),
+      state: data["sc"],
+      ball_position: data["xy"]
+    })
+    #update_odds_foroverview(event_id, overview_odds_data)
   end
 
   defp normalize_odds(odds_list) do

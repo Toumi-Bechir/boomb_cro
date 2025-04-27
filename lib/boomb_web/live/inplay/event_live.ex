@@ -2,7 +2,6 @@ defmodule BoombWeb.EventLive do
   use BoombWeb, :live_view
 
   def mount(%{"event_id" => event_id}, _session, socket) do
-    IO.puts "********************** mount in BoombWeb.EventLive loaded *********************************"
     sports = ["soccer", "basket", "tennis", "baseball", "amfootball", "hockey", "volleyball"]
     if connected?(socket) do
       Enum.each(sports, fn sport ->
@@ -25,10 +24,8 @@ defmodule BoombWeb.EventLive do
 
     odds = case Boomb.OddsCache.get_odds(event_id) do
       {:ok, odds_data} ->
-        # Ensure odds_data has a state field, even if it's nil initially
         Map.merge(%{state: nil, ball_position: nil}, odds_data)
       {:error, _} ->
-        # Default structure if no odds data is available
         %{state: nil, ball_position: nil}
     end
 
@@ -102,7 +99,10 @@ defmodule BoombWeb.EventLive do
   end
 
   def handle_info(%{event_id: event_id, odds: odds, score: score, period_time: period_time, state: state, ball_position: ball_position}, socket) do
-    #IO.puts "-------state-----#{inspect state}------------------------"
+    if Application.get_env(:boomb, :env) == :dev do
+      Logger.debug("Received odds_update for event #{event_id}: ball_position=#{inspect(ball_position)}, state=#{inspect(state)}")
+    end
+
     updated_odds_data = %{
       odds: odds,
       score: score,
@@ -138,10 +138,10 @@ defmodule BoombWeb.EventLive do
   defp format_time(seconds) do
     minutes = div(seconds, 60)
     seconds = rem(seconds, 60)
-    "#{minutes}:#{String.pad_leading(to_string(seconds), 2, "0")}"
+    "#{minutes}'#{String.pad_leading(to_string(seconds), 2, "0")}\""
   end
 
-  defp map_ball_position(ball_position, pitch_width \\ 275, pitch_height \\ 160) do
+  defp map_ball_position(ball_position, _pitch_width \\ 100, _pitch_height \\ 60) do
     case String.split(ball_position, ",") do
       [x, y] ->
         try do
@@ -149,10 +149,10 @@ defmodule BoombWeb.EventLive do
           svg_y = parse_to_float(y) * 60
           {svg_x, svg_y}
         rescue
-          _ -> {pitch_width / 2, pitch_height / 2}
+          _ -> {50, 30} # Center of the pitch
         end
       _ ->
-        {pitch_width / 2, pitch_height / 2}
+        {50, 30} # Center of the pitch
     end
   end
 
@@ -183,7 +183,7 @@ defmodule BoombWeb.EventLive do
   end
 
   defp get_state_color(state_name) do
-    state = String.downcase(state_name)
+    state = if state_name, do: String.downcase(state_name), else: ""
     cond do
       String.contains?(state, "attack") -> "text-orange-500"
       String.contains?(state, "dangerous") -> "text-red-500"
@@ -217,7 +217,7 @@ defmodule BoombWeb.EventLive do
 
   defp sport_icon("tennis"), do: """
   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M19.52 2.01l-5.53 5.53c-.39.39-.39 1.02 0 1.41l5.53 5.53c.39.39 1.02.39 1.41 0l5.53-5.53c.39-.39.39-1.02 0-1.41l-5.53-5.53c-.39-.39-1.02-.39-1.41 0zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+    <path d="M19.52 2.01l-5.53 5.53c-.39.39-.39 1.02 0 1.41l5.53 5.53c-.39.39 1.02.39 1.41 0l5.53-5.53c-.39-.39.39-1.02 0-1.41l-5.53-5.53c-.39-.39-1.02-.39-1.41 0zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
   </svg>
   """
 
@@ -283,11 +283,24 @@ defmodule BoombWeb.EventLive do
     end
   end
 
+  defp market_ids_for_filter("ALL"), do: ["1777", "27", "1016", "31"]
+  defp market_ids_for_filter("Bet Build"), do: ["1777"]
+  defp market_ids_for_filter("Goal"), do: ["1016"]
+  defp market_ids_for_filter("Score"), do: ["31"]
+  defp market_ids_for_filter("Halftime"), do: ["1777"]
+  defp market_ids_for_filter("Handicap"), do: ["31"]
+  defp market_ids_for_filter("Corners"), do: ["31"]
+  defp market_ids_for_filter("Specials"), do: ["1016"]
+  defp market_ids_for_filter("Fast Markets"), do: ["1777"]
+  defp market_ids_for_filter("Combos"), do: ["1777"]
+  defp market_ids_for_filter("Players"), do: ["1016"]
+  defp market_ids_for_filter(_), do: []
+
   def render(assigns) do
     ~H"""
-    <div class="flex min-h-screen bg-gray-900 text-gray-100">
+    <div class="flex min-h-screen bg-[#1a2e40] text-white">
       <!-- Left Menu: Scrollable Sidebar -->
-      <aside class="w-full md:w-1/4 lg:w-1/5 bg-gray-800 border-r border-gray-700 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+      <aside class="w-full md:w-1/4 lg:w-1/5 bg-[#23384a] border-r border-[#0d2235] overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         <div class="p-2 space-y-2">
           <%= for {sport, competitions} <- @grouped_events do %>
             <div>
@@ -310,7 +323,7 @@ defmodule BoombWeb.EventLive do
               <%= if @expanded_sport == sport do %>
                 <div class="space-y-1">
                   <%= for {comp_name, events} <- competitions do %>
-                    <div class="bg-gray-700 rounded p-2">
+                    <div class="bg-[#2d4657] rounded p-2">
                       <div class="flex items-center space-x-2 text-gray-300 text-sm">
                         <span class="truncate"><%= comp_name %></span>
                       </div>
@@ -320,7 +333,7 @@ defmodule BoombWeb.EventLive do
                             href={~p"/event/#{event.event_id}"}
                             phx-click="select_event"
                             phx-value-event_id={event.event_id}
-                            class={"block p-2 rounded text-gray-200 hover:bg-gray-600 flex justify-between items-center #{if @selected_event_id == event.event_id, do: "bg-gray-600", else: ""}"}
+                            class={"block p-2 rounded text-gray-200 hover:bg-[#3a586a] flex justify-between items-center #{if @selected_event_id == event.event_id, do: "bg-[#3a586a]", else: ""}"}
                           >
                             <div class="flex items-center space-x-2">
                               <span class="truncate text-sm"><%= event.team1 %></span>
@@ -355,24 +368,24 @@ defmodule BoombWeb.EventLive do
       </aside>
 
       <!-- Middle Part: Markets and Odds -->
-      <main class="flex-1 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 p-4">
+      <main class="flex-1 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 p-2">
         <%= if @event do %>
-          <!-- Upper Part: Match Details with Background -->
-          <div class="bg-gray-800 p-4 rounded-lg shadow-md mb-4">
+          <!-- Header: Match Details -->
+          <div class="bg-[#23384a] p-2 rounded-lg shadow-md mb-2">
             <div class="flex justify-between items-center">
-              <h1 class="text-xl font-bold text-white">
+              <h1 class="text-lg font-bold text-white">
                 <%= @event.team1 %> vs <%= @event.team2 %>
               </h1>
               <div class="text-right text-gray-300">
                 <%= if odds_data = @odds do %>
-                  <div class="text-lg font-semibold"><%= Map.get(odds_data, :score, "0:0") %></div>
+                  <div class="text-md font-semibold"><%= Map.get(odds_data, :score, "0:0") %></div>
                   <%= if @event.sport in ["soccer", "hockey", "volleyball"] do %>
-                    <div class="text-sm"><%= format_time(Map.get(odds_data, :period_time, 0)) %></div>
+                    <div class="text-xs"><%= format_time(Map.get(odds_data, :period_time, 0)) %></div>
                   <% end %>
                 <% else %>
-                  <div class="text-lg font-semibold">0:0</div>
+                  <div class="text-md font-semibold">0:0</div>
                   <%= if @event.sport in ["soccer", "hockey", "volleyball"] do %>
-                    <div class="text-sm">00:00</div>
+                    <div class="text-xs">00:00</div>
                   <% end %>
                 <% end %>
               </div>
@@ -380,123 +393,95 @@ defmodule BoombWeb.EventLive do
           </div>
 
           <!-- Odds Filter -->
-          <div class="flex overflow-x-auto space-x-2 mb-4">
+          <div class="flex overflow-x-auto space-x-1 mb-2">
             <button
               phx-click="set_odds_filter"
               phx-value-filter="ALL"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "ALL", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "ALL", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
               ALL
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Bet Build"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Bet Build", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Same Game Parlay"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Same Game Parlay", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Bet Build
+              Same Game Parlay
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Goal"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Goal", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Flash Bets"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Flash Bets", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Goal
+              Flash Bets
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Score"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Score", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Asian Lines"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Asian Lines", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Score
+              Asian Lines
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Halftime"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Halftime", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Corners/Cards"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Corners/Cards", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Halftime
+              Corners/Cards
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Handicap"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Handicap", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Goals"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Goals", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Handicap
+              Goals
             </button>
             <button
               phx-click="set_odds_filter"
-              phx-value-filter="Corners"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Corners", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
+              phx-value-filter="Half"
+              class={"px-3 py-1 rounded-lg text-xs font-medium #{if @odds_filter == "Half", do: "bg-[#00b3ff] text-white", else: "bg-[#2d4657] text-gray-300 hover:bg-[#3a586a]"}"}
             >
-              Corners
-            </button>
-            <button
-              phx-click="set_odds_filter"
-              phx-value-filter="Specials"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Specials", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
-            >
-              Specials
-            </button>
-            <button
-              phx-click="set_odds_filter"
-              phx-value-filter="Fast Markets"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Fast Markets", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
-            >
-              Fast Markets
-            </button>
-            <button
-              phx-click="set_odds_filter"
-              phx-value-filter="Combos"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Combos", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
-            >
-              Combos
-            </button>
-            <button
-              phx-click="set_odds_filter"
-              phx-value-filter="Players"
-              class={"px-4 py-2 rounded-lg text-sm font-medium #{if @odds_filter == "Players", do: "bg-gray-600 text-white", else: "bg-gray-700 text-gray-300 hover:bg-gray-600"}"}
-            >
-              Players
+              Half
             </button>
           </div>
 
           <!-- Markets and Odds -->
-          <div class="space-y-4">
+          <div class="space-y-2">
             <%= if odds_data = @odds do %>
               <%= for {market_id, market_data} <- Map.get(odds_data, :odds, %{}), @odds_filter == "ALL" or market_id in market_ids_for_filter(@odds_filter) do %>
-                <div class="bg-gray-800 p-4 rounded-lg">
-                  <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-md font-medium text-gray-300">
+                <div class="bg-[#23384a] p-2 rounded-lg">
+                  <div class="flex justify-between items-center mb-1">
+                    <h3 class="text-xs font-medium text-gray-300">
+                    
                       <%= get_market_name(@event.sport, market_id) %>
                     </h3>
                     <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                     </svg>
                   </div>
-                  <div class="flex space-x-2">
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-1">
                     <%= for {name, value} <- get_market_odds(odds_data, market_id, []) do %>
-                      <div class="flex-1 bg-gray-700 p-2 rounded text-center">
-                        <div class="text-gray-400 text-sm"><%= name %></div>
-                        <div class="text-white font-semibold"><%= value %></div>
-                      </div>
+                      <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm text-xs font-bold">
+                        <%= name %> <span class="block"><%= value %></span>
+                      </button>
                     <% end %>
                   </div>
                 </div>
               <% end %>
             <% else %>
-              <p class="text-gray-500 text-center">No odds available for this event.</p>
+              <p class="text-gray-500 text-center text-xs">No odds available for this event.</p>
             <% end %>
           </div>
         <% else %>
-          <p class="text-gray-500 text-center">Event not found. Please select another event.</p>
+          <p class="text-gray-500 text-center text-xs">Event not found. Please select another event.</p>
         <% end %>
       </main>
 
       <!-- Right Part: Tracker and Statistics -->
-      <aside class="hidden lg:block w-1/4 bg-gray-800 border-l border-gray-700 p-4 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-        <div class="space-y-4">
+      <aside class="hidden lg:block w-1/4 bg-[#23384a] border-l border-[#0d2235] p-2 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+        <div class="space-y-2">
           <!-- Tracker -->
-          <div class="bg-gray-700 p-4 rounded-lg">
+          <div class="bg-[#2d4657] p-2 rounded-lg">
             <div class="relative">
               <!-- Dynamic Soccer Pitch -->
               <%= if @event && @event.sport == "soccer" do %>
@@ -507,7 +492,6 @@ defmodule BoombWeb.EventLive do
                     <rect x="0" y="0" width="100" height="60" fill="none" stroke="white" stroke-width="0.5" />
                     <!-- Center Line -->
                     <line x1="50" y1="0" x2="50" y2="60" stroke="white" stroke-width="0.5" stroke-dasharray="2,2" />
-
                     <!-- Penalty Areas -->
                     <rect x="0" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
                     <rect x="90" y="15" width="10" height="30" fill="none" stroke="white" stroke-width="0.5" />
@@ -519,60 +503,29 @@ defmodule BoombWeb.EventLive do
                     <rect x="99" y="25" width="1" height="10" fill="white" />
                     <!-- Ball Path (if positions exist) -->
                     <%= if length(@ball_position_history) > 1 do %>
-                      <%
-                        points = Enum.map(@ball_position_history, fn pos ->
-                          {x, y} = map_ball_position(pos)
-                          "#{x},#{y}"
-                        end) |> Enum.join(" ")
-                      %>
-                      <polyline
-                        points={points}
-                        fill="none"
-                        stroke="white"
-                        stroke-width="0.5"
-                      />
+                      <% points = Enum.map(@ball_position_history, fn pos ->
+                           {x, y} = map_ball_position(pos)
+                           "#{x},#{y}"
+                         end) |> Enum.join(" ") %>
+                      <polyline points={points} fill="none" stroke="white" stroke-width="0.5" />
                     <% end %>
-
                     <!-- Ball -->
-
                     <%= if ball_pos = List.first(@ball_position_history) do %>
                       <% {ball_x, ball_y} = map_ball_position(ball_pos) %>
-                      <circle
-                        cx={ball_x}
-                        cy={ball_y}
-                        r="1"
-                        fill="white"
-                        class="transition-all duration-500 ease-in-out"
-                      />
-                      <!-- Center Circle -->
+                      <circle cx={ball_x} cy={ball_y} r="1" fill="white" class="transition-all duration-500 ease-in-out" />
                       <circle cx={ball_x} cy={ball_y} r="3" class="transition-all duration-500 ease-in-out" fill="none" stroke="white" stroke-width="0.3" />
-                      <!-- State Text -->
-
                       <% state_code = Map.get(@odds, :state) %>
                       <% state_name = if state_code do
-                        get_state_name(@event.sport, state_code)
-                      else
-                        "No State Available"
-                      end %>
-                      <text
-                        x={ball_x + 5}
-                        y={ball_y - 2}
-                        class={"font-semibold #{get_state_color(state_name)} transition-all duration-500 ease-in-out"}
-                        fill="currentColor"
-                         style="font-size: 5px;"
-                      >
+                           get_state_name(@event.sport, state_code)
+                         else
+                           "No State Available"
+                         end %>
+                      <text x={ball_x + 5} y={ball_y - 2} class={"font-semibold #{get_state_color(state_name)} transition-all duration-500 ease-in-out"} fill="currentColor" style="font-size: 5px;">
                         <%= state_name %>
                       </text>
                     <% else %>
-                      <!-- Default Ball Position (Center) -->
                       <circle cx="50" cy="30" r="1" fill="white" />
-                      <!-- Default State Text -->
-                      <text
-                        x="55"
-                        y="28"
-                        class="text-xs font-semibold text-gray-400"
-                        fill="currentColor"
-                      >
+                      <text x="55" y="28" class="text-xs font-semibold text-gray-400" fill="currentColor">
                         No State Available
                       </text>
                     <% end %>
@@ -589,90 +542,73 @@ defmodule BoombWeb.EventLive do
               <% end %>
 
               <!-- Match Info -->
-              <div class="flex justify-between items-center mt-2">
-                <div class="text-gray-300 text-sm">
-                  <%= @event.team1 %> <%= Map.get(@odds, :score, "0:0") %>
+              <div class="flex justify-between items-center mt-1">
+                <div class="text-gray-300 text-xs">
+                  <%= @event.team1 %>
                 </div>
-                <div class="text-gray-300 text-sm">
-                  <%= Map.get(@odds, :score, "0:0") %> <%= @event.team2 %>
+                <div class="text-gray-300 text-xs">
+                  <%= @event.team2 %>
+                </div>
+              </div>
+              <div class="flex justify-between items-center">
+                <div class="text-gray-300 text-xs">
+                  <%= Map.get(@odds, :score, "0:0") %>
+                </div>
+                <div class="text-gray-300 text-xs">
+                  <%= Map.get(@odds, :score, "0:0") %>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Tabs: Stats, Timeline, Lineups, Standings -->
+          <div class="flex space-x-1 mb-2">
+            <button class="px-3 py-1 bg-[#2d4657] text-gray-300 hover:bg-[#3a586a] rounded-sm text-xs font-medium">
+              STATS
+            </button>
+            <button class="px-3 py-1 bg-[#2d4657] text-gray-300 hover:bg-[#3a586a] rounded-sm text-xs font-medium">
+              TIMELINE
+            </button>
+            <button class="px-3 py-1 bg-[#2d4657] text-gray-300 hover:bg-[#3a586a] rounded-sm text-xs font-medium">
+              LINEUPS
+            </button>
+            <button class="px-3 py-1 bg-[#2d4657] text-gray-300 hover:bg-[#3a586a] rounded-sm text-xs font-medium">
+              STANDINGS
+            </button>
+          </div>
+
           <!-- Statistics -->
-          <div class="bg-gray-700 p-4 rounded-lg">
-            <h3 class="text-md font-medium text-gray-300 mb-2">Statistics</h3>
+          <div class="bg-[#2d4657] p-2 rounded-lg">
             <div class="space-y-2">
               <!-- Static Stats -->
               <div class="flex justify-between items-center">
-                <span class="text-gray-400 text-sm">Dangerous Attacks</span>
+                <span class="text-gray-400 text-xs">Attacks</span>
                 <div class="flex items-center space-x-2">
-                  <span class="text-gray-300">41</span>
+                  <span class="text-gray-300 text-xs">39</span>
                   <div class="w-32 h-2 bg-gray-600 rounded">
-                    <div class="w-3/5 h-full bg-yellow-500 rounded"></div>
+                    <div class="w-[55%] h-full bg-yellow-500 rounded"></div>
                   </div>
-                  <span class="text-gray-300">36</span>
+                  <span class="text-gray-300 text-xs">32</span>
                 </div>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-gray-400 text-sm">Attacks</span>
+                <span class="text-gray-400 text-xs">Dangerous Attacks</span>
                 <div class="flex items-center space-x-2">
-                  <span class="text-gray-300">18</span>
+                  <span class="text-gray-300 text-xs">31</span>
                   <div class="w-32 h-2 bg-gray-600 rounded">
-                    <div class="w-2/5 h-full bg-yellow-500 rounded"></div>
+                    <div class="w-[50%] h-full bg-yellow-500 rounded"></div>
                   </div>
-                  <span class="text-gray-300">15</span>
+                  <span class="text-gray-300 text-xs">30</span>
                 </div>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-gray-400 text-sm">Possession %</span>
+                <span class="text-gray-400 text-xs">Possession %</span>
                 <div class="flex items-center space-x-2">
-                  <span class="text-gray-300">55</span>
+                  <span class="text-gray-300 text-xs">52</span>
                   <div class="w-32 h-2 bg-gray-600 rounded">
-                    <div class="w-3/5 h-full bg-yellow-500 rounded"></div>
+                    <div class="w-[52%] h-full bg-yellow-500 rounded"></div>
                   </div>
-                  <span class="text-gray-300">45</span>
-                </div>
-              </div>
-              <!-- Action Areas -->
-              <div class="mt-4">
-                <h4 class="text-sm font-medium text-gray-300 mb-2">Action Areas</h4>
-                <div class="flex justify-between items-center">
-                  <div class="w-1/3 h-10 bg-gray-600 rounded-l-lg flex items-center justify-center text-gray-300">25%</div>
-                  <div class="w-1/3 h-10 bg-gray-600 flex items-center justify-center text-gray-300">48%</div>
-                  <div class="w-1/3 h-10 bg-gray-600 rounded-r-lg flex items-center justify-center text-gray-300">27%</div>
-                </div>
-              </div>
-              <!-- Additional Stats -->
-              <div class="mt-4 grid grid-cols-2 gap-2">
-                <div>
-                  <span class="text-gray-400 text-sm">Key Passes</span>
-                  <div class="flex justify-between">
-                    <span class="text-gray-300">5</span>
-                    <span class="text-gray-300">3</span>
-                  </div>
-                </div>
-                <div>
-                  <span class="text-gray-400 text-sm">Passing Accuracy</span>
-                  <div class="flex justify-between">
-                    <span class="text-gray-300">87%</span>
-                    <span class="text-gray-300">84%</span>
-                  </div>
-                </div>
-                <div>
-                  <span class="text-gray-400 text-sm">Goalkeeper Saves</span>
-                  <div class="flex justify-between">
-                    <span class="text-gray-300">2</span>
-                    <span class="text-gray-300">3</span>
-                  </div>
-                </div>
-                <div>
-                  <span class="text-gray-400 text-sm">Crosses</span>
-                  <div class="flex justify-between">
-                    <span class="text-gray-300">3</span>
-                    <span class="text-gray-300">2</span>
-                  </div>
+                  <span class="text-gray-300 text-xs">48</span>
                 </div>
               </div>
             </div>

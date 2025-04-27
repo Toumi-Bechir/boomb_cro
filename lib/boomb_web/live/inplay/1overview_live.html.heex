@@ -1,0 +1,174 @@
+<div class="min-h-screen bg-[#0d2235] text-white">
+  <!-- Top Navigation Menu - Similar to bet365's green header -->
+  <nav class="bg-[#185327] p-1 shadow-md sticky top-0 z-10">
+    <div class="flex space-x-1 overflow-x-auto scrollbar-thin scrollbar-thumb-[#2d6b3d] scrollbar-track-[#185327]">
+      <button
+        phx-click="filter_by_sport"
+        phx-value-sport="all"
+        class={"flex items-center space-x-1 px-3 py-1 rounded-sm text-sm font-bold #{if @selected_sport == nil, do: "bg-white text-[#185327]", else: "bg-[#185327] text-white hover:bg-[#2d6b3d]"}"}
+      >
+        <span>ALL</span>
+        <span class="bg-[#0d2235] text-white rounded-full px-1.5 py-0.5 text-xs">
+          <%= Enum.sum(Enum.map(@sports, fn sport -> sport_count(Boomb.SportsCache.get_sports(), sport) end)) %>
+        </span>
+      </button>
+
+      <%= for sport <- @sports do %>
+        <button
+          phx-click="filter_by_sport"
+          phx-value-sport={sport}
+          class={"flex items-center space-x-1 px-3 py-1 rounded-sm text-sm font-bold #{if @selected_sport == sport, do: "bg-white text-[#185327]", else: "bg-[#185327] text-white hover:bg-[#2d6b3d]"}"}
+        >
+          <span class="hidden md:inline"><%= String.capitalize(sport) %></span>
+          <span class="md:hidden"><%= sport_icon(sport) %></span>
+          <span class="bg-[#0d2235] text-white rounded-full px-1.5 py-0.5 text-xs">
+            <%= sport_count(Boomb.SportsCache.get_sports(), sport) %>
+          </span>
+        </button>
+      <% end %>
+    </div>
+  </nav>
+
+  <!-- Live indicator similar to bet365 -->
+  <div class="bg-[#d00] py-1 px-3 flex items-center">
+    <div class="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+    <span class="text-xs font-bold">LIVE NOW</span>
+  </div>
+
+  <!-- Main Content -->
+  <div class="p-1">
+    <%= if Enum.empty?(@events_by_competition) do %>
+      <div class="bg-[#1a2e40] p-4 rounded text-center text-gray-400">
+        No live events available at the moment. Please check back later.
+      </div>
+    <% else %>
+      <!-- Desktop Table View - bet365 style -->
+      <div class="hidden md:block">
+        <%= for {sport, competition_name, events} <- @events_by_competition do %>
+          <div class="mb-2">
+            <div class="bg-[#1a2e40] p-2 flex items-center">
+              <div class="w-3 h-3 bg-[#d00] rounded-full mr-2 animate-pulse"></div>
+              <h2 class="text-sm font-bold">
+                <span class="text-gray-400"><%= String.upcase(sport) %></span> 
+                <span class="mx-1">|</span>
+                <span><%= competition_name %></span>
+              </h2>
+            </div>
+            
+            <table class="w-full text-white text-xs bg-[#1a2e40]">
+              <thead>
+                <tr class="bg-[#0d2235] text-gray-400">
+                  <th class="p-2 text-left w-1/3">MATCH</th>
+                  <th class="p-2 text-center w-16">SCORE</th>
+                  <th class="p-2 text-center w-16">TIME</th>
+                  <th class="p-2 text-center w-20">1</th>
+                  <th class="p-2 text-center w-20">X</th>
+                  <th class="p-2 text-center w-20">2</th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= for event <- events do %>
+                  <% odds_data = @odds[event.event_id] || %{} %>
+                  <tr class="border-b border-[#0d2235] hover:bg-[#23384a]">
+                    <td class="p-2">
+                      <a href={~p"/event/#{event.event_id}"} class="flex items-center hover:text-[#00b3ff]">
+                        <span class="w-2 h-2 bg-[#d00] rounded-full mr-2 animate-pulse"></span>
+                        <div class="truncate">
+                          <div class="font-medium"><%= event.team1 %></div>
+                          <div class="font-medium"><%= event.team2 %></div>
+                        </div>
+                      </a>
+                    </td>
+                    <td class="p-2 text-center font-bold">
+                      <%= Map.get(odds_data, :score, "0:0") %>
+                    </td>
+                    <td class="p-2 text-center text-gray-400">
+                      <%= if sport in ["soccer", "hockey", "volleyball"] do %>
+                        <%= format_time(Map.get(odds_data, :period_time, 0)) %>
+                      <% else %>
+                        LIVE
+                      <% end %>
+                    </td>
+                    <%= with market <- get_market_odds(odds_data, "1777", %{"1" => "-", "X" => "-", "2" => "-"}) do %>
+                      <td class="p-2 text-center">
+                        <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
+                          <%= market["1"] %>
+                        </button>
+                      </td>
+                      <td class="p-2 text-center">
+                        <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
+                          <%= market["X"] %>
+                        </button>
+                      </td>
+                      <td class="p-2 text-center">
+                        <button class="w-full py-1 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm font-bold">
+                          <%= market["2"] %>
+                        </button>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Mobile Card View - bet365 style -->
+      <div class="block md:hidden space-y-2">
+        <%= for {sport, competition_name, events} <- @events_by_competition do %>
+          <div class="bg-[#1a2e40] p-2">
+            <div class="flex items-center">
+              <div class="w-2 h-2 bg-[#d00] rounded-full mr-2 animate-pulse"></div>
+              <h2 class="text-xs font-bold">
+                <span class="text-gray-400"><%= String.upcase(sport) %></span> 
+                <span class="mx-1">|</span>
+                <span class="truncate"><%= competition_name %></span>
+              </h2>
+            </div>
+          </div>
+          
+          <%= for event <- events do %>
+            <% odds_data = @odds[event.event_id] || %{} %>
+            <div class="bg-[#1a2e40] p-2 border-b border-[#0d2235]">
+              <a href={~p"/event/#{event.event_id}"} class="block">
+                <div class="flex items-center mb-1">
+                  <div class="w-2 h-2 bg-[#d00] rounded-full mr-2 animate-pulse"></div>
+                  <div class="flex-1 truncate">
+                    <div class="font-medium"><%= event.team1 %></div>
+                    <div class="font-medium"><%= event.team2 %></div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+                  <div>Score: <span class="text-white font-bold"><%= Map.get(odds_data, :score, "0:0") %></span></div>
+                  <div>
+                    <%= if sport in ["soccer", "hockey", "volleyball"] do %>
+                      <%= format_time(Map.get(odds_data, :period_time, 0)) %>
+                    <% else %>
+                      LIVE
+                    <% end %>
+                  </div>
+                </div>
+                
+                <%= with market <- get_market_odds(odds_data, "1777", %{"1" => "-", "X" => "-", "2" => "-"}) do %>
+                  <div class="grid grid-cols-3 gap-1">
+                    <button class="py-1.5 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm text-xs font-bold">
+                      1 <span class="block"><%= market["1"] %></span>
+                    </button>
+                    <button class="py-1.5 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm text-xs font-bold">
+                      X <span class="block"><%= market["X"] %></span>
+                    </button>
+                    <button class="py-1.5 bg-[#2d6b3d] hover:bg-[#3a7a4a] rounded-sm text-xs font-bold">
+                      2 <span class="block"><%= market["2"] %></span>
+                    </button>
+                  </div>
+                <% end %>
+              </a>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

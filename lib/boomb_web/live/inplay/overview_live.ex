@@ -20,14 +20,18 @@ defmodule BoombWeb.OverviewLive do
         Phoenix.PubSub.subscribe(Boomb.PubSub, "events_available:#{sport}")
       end)
     end
+IO.puts "-------------------------mount in overview live -----------------------------"
+    sports_data = %{"soccer" =>  get_sport_data_by_sport("soccer")}
 
-    sports_data = Boomb.SportsCache.get_sports()
     events_by_competition = organize_events_by_competition(sports_data, nil)
-    odds = Boomb.OddsCache.get_all_odds()
+    odds = %{}#Boomb.OddsCache.get_all_odds()
+   
+    
+    
 
     socket =
       socket
-      |> assign(:selected_sport, nil)
+      |> assign(:selected_sport, "soccer")
       |> assign(:sports, @sports)
       |> assign(:odds, odds)
       |> assign(:events_by_competition, events_by_competition)
@@ -36,11 +40,23 @@ defmodule BoombWeb.OverviewLive do
     update_event_subscriptions(socket, events_by_competition)
     {:ok, socket}
   end
-
+#-----------------------------------------------------------------------------
+def get_sport_data_by_sport(sport_name) do
+  case :ets.lookup(:sports_cache, :sports) do
+    [{:sports, sports}] -> 
+      Map.get(sports, sport_name, [])
+    [] -> 
+      []
+  end
+end
+#-----------------------------------------------------------------------------
   @impl true
   def handle_event("filter_by_sport", %{"sport" => sport}, socket) do
-    selected_sport = if sport == "all" or sport == socket.assigns.selected_sport, do: nil, else: sport
-    sports_data = Boomb.SportsCache.get_sports()
+    selected_sport = if sport == "all" or sport == socket.assigns.selected_sport, do: socket.assigns.selected_sport, else: sport
+    
+    sports_data = %{sport =>  get_sport_data_by_sport(sport)} 
+    
+    
     events_by_competition = organize_events_by_competition(sports_data, selected_sport)
 
     socket =
@@ -65,6 +81,7 @@ defmodule BoombWeb.OverviewLive do
     Boomb.SportsCache.update_sports(Boomb.Event.group_by_sport())
 
     sports_data = Boomb.SportsCache.get_sports()
+    #sports_data = %{socket.assigns.selected_sport =>  get_sport_data_by_sport(socket.assigns.selected_sport)}
     events_by_competition = organize_events_by_competition(sports_data, socket.assigns.selected_sport)
 
     socket =
@@ -75,7 +92,8 @@ defmodule BoombWeb.OverviewLive do
     {:noreply, socket}
   end
 
-  def handle_info(%{event_id: event_id, odds: odds, score: score, period_time: period_time}, socket) do
+  def handle_info(%{overview_data: %{event_id: event_id, odds: odds, score: score, period_time: period_time}}, socket) do
+    
     updated_odds = Map.put(socket.assigns.odds, event_id, %{
       odds: odds,
       score: score,
@@ -84,7 +102,7 @@ defmodule BoombWeb.OverviewLive do
 
     {:noreply, assign(socket, :odds, updated_odds)}
   end
-
+  
   def handle_info(msg, socket) do
     Logger.warning("Unhandled message in OverviewLive: #{inspect(msg)}")
     {:noreply, socket}
@@ -131,13 +149,15 @@ defmodule BoombWeb.OverviewLive do
 
     Enum.each(to_unsubscribe, fn event_id ->
       Enum.each(@sports, fn sport ->
-        Phoenix.PubSub.unsubscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
+        #Phoenix.PubSub.unsubscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
+        Phoenix.PubSub.unsubscribe(Boomb.PubSub, "odds_update_overview:#{sport}:#{event_id}")
       end)
     end)
 
     Enum.each(to_subscribe, fn event_id ->
       Enum.each(@sports, fn sport ->
-        Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
+        #Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update:#{sport}:#{event_id}")
+        Phoenix.PubSub.subscribe(Boomb.PubSub, "odds_update_overview:#{sport}:#{event_id}")
       end)
     end)
 
@@ -145,18 +165,19 @@ defmodule BoombWeb.OverviewLive do
   end
 
   defp get_market_odds(odds_data, market_id, default \\ nil) do
-    case odds_data do
-      %{odds: odds} ->
-        case Map.get(odds, market_id) do
-          nil -> default
-          market ->
-            market_odds = Enum.map(market.odds, fn odd ->
-              {odd.name, odd.value}
-            end)
-            Map.new(market_odds)
-        end
-      _ -> default
-    end
+    #case odds_data do
+    #  %{odds: odds} ->
+    #    case Map.get(odds, market_id) do
+    #      nil -> default
+    #      market ->
+    #        market_odds = Enum.map(market.odds, fn odd ->
+    #          {odd.name, odd.value}
+    #        end)
+    #        Map.new(market_odds)
+    #    end
+    #  _ -> default
+    #end
+    odds_data
   end
 
   defp format_time(seconds) do

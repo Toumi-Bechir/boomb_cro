@@ -12,7 +12,8 @@ defmodule BoombWeb.OverviewLive111 do
     end
 
     sports_data = Boomb.SportsCache.get_sports()
-    events_by_competition = organize_events_by_competition(sports_data, nil) # Initially show all sports
+    IO.inspect sports_data
+        events_by_competition = organize_events_by_competition(sports_data, nil) # Initially show all sports
     # Fetch all cached odds data for initial display
     initial_odds = Boomb.OddsCache.get_all_odds()
     # Subscribe to updates for all events currently displayed

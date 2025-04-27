@@ -31,7 +31,7 @@
   </div>
 
   <!-- Main Content - Takes full width on mobile -->
-  <div class="flex-1 p-4 overflow-y-auto bg-[#464646]">
+  <div class="flex-1 p-4 overflow-y-auto bg-[#383838]">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
       <h1 class="text-2xl font-bold text-white">Leagues</h1>
      <div class="flex flex-wrap gap-2">
@@ -63,7 +63,7 @@
     <%= if @leagues == [] do %>
       <p class="text-gray-500">No leagues available for the selected sport and filter.</p>
     <% else %>
-     <div class="mb-5 flex flex-col sm:flex-row gap-2">
+     <div class="mb-5 flex flex-col sm:flex-row gap-1">
   <!-- Select All Button -->
   <button
     class="
@@ -102,42 +102,42 @@
   </button>
 </div>
     <%= for {country, leagues, count} <- @leagues do %>
-  <div class="mb-6 border-b border-[#404040]/50 pb-4">
-    <!-- Country Header -->
-    <div class="flex items-center justify-between mb-3 px-2">
-      <h2 class="text-[15px] font-semibold text-gray-100 uppercase tracking-wider">
+  <div class=" border-b border-[#404040]/50">
+    <!-- Country Header - Reduced height -->
+    <div class="flex items-center justify-between px-1 py-1.5 bg-[#464646]">
+      <h2 class="text-[12px] font-semibold text-gray-100 uppercase tracking-tight">
         <%= country %>
       </h2>
-      <span class="text-xs bg-[#404040] text-gray-300 px-2 py-0.5 rounded">
+      <span class="text-[11px] bg-[#404040] text-gray-300 px-1.5 py-0.5 rounded">
         <%= count %> leagues
       </span>
     </div>
 
-    <!-- Leagues List -->
-    <div class="space-y-1.5">
+    <!-- Leagues List - Compact version -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-0">
       <%= for league <- leagues do %>
-        <div class="group flex items-center w-full bg-[#404040]/20 hover:bg-[#404040]/40 transition-colors rounded-sm">
-          <!-- Checkbox -->
-          <div class="px-3 py-2.5 border-r border-[#404040]">
+        <div class="group flex items-center">
+          <!-- Checkbox - Compact -->
+          <div class="px-2 py-1.5">
             <input
               type="checkbox"
-              class="w-4 h-4 rounded-sm border-gray-500 text-[#00DFA9] focus:ring-1 focus:ring-[#00DFA9] bg-[#464646]"
+              class="w-3.5 h-3.5 rounded-sm border-gray-500 
+              text-[#00DFA9] focus:ring-1 focus:ring-[#00DFA9] bg-[#464646]"
               phx-click="toggle_league"
               phx-value-league={"#{country}:#{league}"}
               checked={Map.has_key?(@selected_leagues, "#{country}:#{league}")}
             />
           </div>
 
-          <!-- League Name -->
+          <!-- League Name - Compact -->
           <a 
             href={~p"/pregame/matches?#{[sport: @selected_sport, filter: @filter, leagues: "#{country}:#{league}"]}"}
-            class="flex-1 px-3 py-2.5 text-[13.5px] font-medium text-gray-100 hover:text-[#00FFB6] transition-colors"
+            class="flex-1 px-2 py-1.5 text-[13px] font-medium 
+            text-gray-100 hover:text-[#00FFB6]"
           >
             <div class="flex justify-between items-center">
-              <span><%= league %></span>
-              <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-[#00FFB6] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
-              </svg>
+              <span class="text-[12px]"><%= league %></span>
+             
             </div>
           </a>
         </div>
